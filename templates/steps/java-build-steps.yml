@@ -1,0 +1,73 @@
+# Template: java-build-steps.yml
+# Description: Java build steps for Maven and Gradle projects
+# Parameters:
+# - buildTool: Build tool to use ('maven' or 'gradle')
+# - buildConfiguration: Build configuration ('debug' or 'release')
+# - projectPath: Path to project files
+# - skipTests: Whether to skip tests
+# - publishTestResults: Whether to publish test results
+
+parameters:
+- name: buildTool
+  type: string
+- name: buildConfiguration
+  type: string
+- name: projectPath
+  type: string
+- name: skipTests
+  type: boolean
+- name: publishTestResults
+  type: boolean
+
+steps:
+- ${{ if eq(parameters.buildTool, 'maven') }}:
+  - task: Maven@4
+    displayName: 'Maven Build'
+    inputs:
+      mavenPomFile: '$(projectPath)'
+      goals: 'clean compile'
+      options: '-Dmaven.test.skip=$(skipTests)'
+      publishJUnitResults: $(publishTestResults)
+      testResultsFiles: '**/surefire-reports/*.xml'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      mavenVersionOption: 'Default'
+
+- ${{ if eq(parameters.buildTool, 'maven') }}:
+  - task: Maven@4
+    displayName: 'Maven Package'
+    inputs:
+      mavenPomFile: '$(projectPath)'
+      goals: 'package'
+      options: '-Dmaven.test.skip=$(skipTests) -DskipTests=$(skipTests)'
+      publishJUnitResults: $(publishTestResults)
+      testResultsFiles: '**/surefire-reports/*.xml'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      mavenVersionOption: 'Default'
+
+- ${{ if eq(parameters.buildTool, 'gradle') }}:
+  - task: Gradle@2
+    displayName: 'Gradle Build'
+    inputs:
+      workingDirectory: '$(projectPath)'
+      gradleWrapperFile: 'gradlew'
+      gradleOptions: '-Xmx3072m'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      tasks: 'build'
+      publishJUnitResults: $(publishTestResults)
+      testResultsFiles: '**/build/test-results/test/*.xml'
+      options: ${{ if parameters.skipTests }}'-x test'${{ else }}''${{ endif }}
+
+- ${{ if eq(parameters.buildTool, 'gradle') }}:
+  - task: Gradle@2
+    displayName: 'Gradle Assemble'
+    inputs:
+      workingDirectory: '$(projectPath)'
+      gradleWrapperFile: 'gradlew'
+      gradleOptions: '-Xmx3072m'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      tasks: 'assemble'
+      options: ${{ if parameters.skipTests }}'-x test'${{ else }}''${{ endif }}

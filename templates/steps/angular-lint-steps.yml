@@ -1,0 +1,36 @@
+# Template: angular-lint-steps.yml
+# Description: Angular lint steps for running ESLint or Angular CLI lint
+# Parameters:
+# - projectPath: Path to Angular project
+# - lintScript: npm script to run for linting (default: 'lint')
+# - continueOnError: whether to continue on lint errors (default: false)
+
+parameters:
+- name: projectPath
+  type: string
+- name: lintScript
+  type: string
+  default: 'lint'
+- name: continueOnError
+  type: boolean
+  default: false
+
+steps:
+- script: |
+    cd $(projectPath)
+    npm ci
+  displayName: 'Install dependencies'
+
+- script: |
+    cd $(projectPath)
+    npm run $(lintScript)
+  displayName: 'Run lint'
+  continueOnError: ${{ parameters.continueOnError }}
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish lint reports (if any)'
+  condition: exists('$(projectPath)/reports')
+  inputs:
+    PathtoPublish: '$(projectPath)/reports'
+    ArtifactName: 'lint-reports'
+    publishLocation: 'Container'

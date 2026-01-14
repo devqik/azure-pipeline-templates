@@ -1,0 +1,24 @@
+# Template: setup-java.yml
+# Description: Setup Java environment with specified version
+# Parameters:
+# - javaVersion: Java version to install (default: '11')
+
+parameters:
+- name: javaVersion
+  type: string
+  default: '11'
+
+steps:
+- task: JavaToolInstaller@0
+  displayName: 'Setup Java $(javaVersion)'
+  inputs:
+    versionSpec: $(javaVersion)
+    jdkArchitectureOption: 'x64'
+    jdkSourceOption: 'PreInstalled'
+
+- script: |
+    echo "Java version:"
+    java -version
+    echo "Maven version:"
+    mvn -version
+  displayName: 'Verify Java and Maven installation'

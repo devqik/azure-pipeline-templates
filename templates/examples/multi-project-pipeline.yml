@@ -1,0 +1,105 @@
+# Example: Multi-Project Pipeline
+# Description: Complete CI/CD pipeline for Java backend + Angular frontend
+# Usage: Copy this file to your project and customize as needed
+
+trigger:
+  branches:
+    include: ['main', 'develop']
+  paths:
+    include: ['backend/**', 'frontend/**', 'azure-pipelines.yml']
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: DevOps/Templates
+      endpoint: SharedTemplates-ServiceConnection
+      ref: refs/heads/main
+
+variables:
+  - template: variables/common-variables.yml@templates
+
+stages:
+  # Java Backend CI
+  - stage: JavaBackendCI
+    displayName: 'Java Backend CI'
+    jobs:
+      - template: jobs/java-build-job.yml@templates
+        parameters:
+          buildTool: 'maven'
+          buildConfiguration: 'release'
+          projectPath: 'backend/pom.xml'
+          vmImage: 'ubuntu-latest'
+          javaVersion: '11'
+          skipTests: false
+          publishTestResults: true
+          artifactName: 'java-backend-artifacts'
+
+      - template: jobs/java-test-job.yml@templates
+        parameters:
+          buildTool: 'maven'
+          projectPath: 'backend/pom.xml'
+          vmImage: 'ubuntu-latest'
+          testType: 'all'
+          coverageThreshold: 80
+          parallelTests: true
+
+  # Angular Frontend CI
+  - stage: AngularFrontendCI
+    displayName: 'Angular Frontend CI'
+    dependsOn: JavaBackendCI
+    jobs:
+      - template: jobs/angular-build-job.yml@templates
+        parameters:
+          nodeVersion: '18'
+          buildConfiguration: 'production'
+          projectPath: 'frontend'
+          vmImage: 'ubuntu-latest'
+          buildOptimization: true
+          sourceMap: false
+          cacheDependencies: true
+          artifactName: 'angular-frontend-artifacts'
+
+      - template: jobs/angular-test-job.yml@templates
+        parameters:
+          nodeVersion: '18'
+          projectPath: 'frontend'
+          vmImage: 'ubuntu-latest'
+          testType: 'all'
+          coverageThreshold: 80
+          headless: true
+          parallelTests: true
+
+  # Deploy to Staging
+  - stage: DeployToStaging
+    displayName: 'Deploy to Staging'
+    dependsOn: AngularFrontendCI
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployBackendToStaging
+        displayName: 'Deploy Backend to Staging'
+        environment: 'staging-backend'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: java-backend-artifacts
+                - script: |
+                    echo "Deploying Java backend to staging..."
+                    # Add your backend deployment steps here
+                  displayName: 'Deploy Backend'
+
+      - deployment: DeployFrontendToStaging
+        displayName: 'Deploy Frontend to Staging'
+        environment: 'staging-frontend'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: angular-frontend-artifacts
+                - script: |
+                    echo "Deploying Angular frontend to staging..."
+                    # Add your frontend deployment steps here
+                  displayName: 'Deploy Frontend'

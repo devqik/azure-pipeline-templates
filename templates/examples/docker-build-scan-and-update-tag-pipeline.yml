@@ -1,0 +1,47 @@
+# Example: docker-build-scan-and-update-tag-pipeline.yml
+# Description: Example pipeline using reusable stages to build, scan, and push an image
+
+trigger:
+  - main
+  - develop
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: DevOps/Templates
+      endpoint: SharedTemplates-ServiceConnection
+      ref: refs/heads/main
+
+variables:
+  - group: DevOpsVariables
+  - name: imageRepository
+    value: my-app
+  - name: imageTag
+    value: my-app-$(Build.BuildId)
+  - name: containerServiceConnection
+    value: DockerRegistry-ServiceConnection
+  - name: sharedContainerServiceConnection
+    value: SharedDockerRegistry-ServiceConnection
+  - name: dockerfilePath
+    value: 'Dockerfile'
+
+stages:
+  - template: templates/stages/docker-build-scan-push-stage.yml@templates
+    parameters:
+      stageName: BuildAndScan
+      displayName: Build, Scan, and Push Image, Email Report
+      containerServiceConnection: $(containerServiceConnection)
+      sharedContainerServiceConnection: $(sharedContainerServiceConnection)
+      imageRepository: $(imageRepository)
+      dockerfilePath: $(dockerfilePath)
+      buildContext: $(Build.SourcesDirectory)
+      tag: $(imageTag)
+      poolName: Linux
+      demands:
+        - docker_repo
+      enableCache: true
+      cacheFromTag: cache
+      pushCache: true
+      buildArguments: >
+        --build-arg BUILDKIT_INLINE_CACHE=1

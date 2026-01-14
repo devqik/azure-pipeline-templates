@@ -1,0 +1,34 @@
+# Template: common-variables.yml
+# Description: Organization-wide common variables
+# Usage: Include this template in your pipeline to get common variables
+
+variables:
+  # Build Configuration
+  buildConfiguration: 'Release'
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  
+  # Agent Configuration
+  vmImage: 'ubuntu-latest'
+  
+  # Version Control
+  major: '1'
+  minor: '0'
+  patch: $[counter(variables['Build.SourceBranchName'], 0)]
+  version: '$(major).$(minor).$(patch)'
+  
+  # Artifacts
+  artifactName: 'drop'
+  
+  # Test Configuration
+  testResultsFormat: 'JUnit'
+  coverageThreshold: 80
+  
+  # Security
+  securityScanEnabled: true
+  dependencyCheckEnabled: true
+  
+  # Performance
+  parallelJobs: 4
+  cacheEnabled: true

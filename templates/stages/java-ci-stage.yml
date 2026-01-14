@@ -1,0 +1,65 @@
+# Template: java-ci-stage.yml
+# Description: Complete Java CI stage with build and test jobs
+# Parameters:
+# - buildTool: Build tool to use ('maven' or 'gradle', default: 'maven')
+# - buildConfiguration: Build configuration ('debug' or 'release', default: 'release')
+# - projectPath: Path to project files (default: '**/pom.xml' for Maven, '**/build.gradle' for Gradle)
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - javaVersion: Java version to use (default: '11')
+# - runTests: Whether to run tests (default: true)
+# - testType: Type of tests to run ('unit', 'integration', 'all', default: 'all')
+# - coverageThreshold: Minimum code coverage percentage (default: 80)
+
+parameters:
+- name: buildTool
+  type: string
+  default: 'maven'
+  values: ['maven', 'gradle']
+- name: buildConfiguration
+  type: string
+  default: 'release'
+  values: ['debug', 'release']
+- name: projectPath
+  type: string
+  default: '**/pom.xml'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: javaVersion
+  type: string
+  default: '11'
+- name: runTests
+  type: boolean
+  default: true
+- name: testType
+  type: string
+  default: 'all'
+  values: ['unit', 'integration', 'all']
+- name: coverageThreshold
+  type: number
+  default: 80
+
+stages:
+- stage: JavaCI
+  displayName: 'Java CI'
+  jobs:
+  - template: jobs/java-build-job.yml@templates
+    parameters:
+      buildTool: ${{ parameters.buildTool }}
+      buildConfiguration: ${{ parameters.buildConfiguration }}
+      projectPath: ${{ parameters.projectPath }}
+      vmImage: ${{ parameters.vmImage }}
+      javaVersion: ${{ parameters.javaVersion }}
+      skipTests: ${{ not(parameters.runTests) }}
+      publishTestResults: ${{ parameters.runTests }}
+      artifactName: 'java-build-artifacts'
+
+  - ${{ if parameters.runTests }}:
+    - template: jobs/java-test-job.yml@templates
+      parameters:
+        buildTool: ${{ parameters.buildTool }}
+        projectPath: ${{ parameters.projectPath }}
+        vmImage: ${{ parameters.vmImage }}
+        testType: ${{ parameters.testType }}
+        coverageThreshold: ${{ parameters.coverageThreshold }}
+        parallelTests: true

@@ -1,0 +1,21 @@
+# Template: publish-artifacts.yml
+# Description: Publish build artifacts
+# Parameters:
+# - artifactName: Name for the published artifacts
+# - publishPath: Path to artifacts to publish
+
+parameters:
+- name: artifactName
+  type: string
+- name: publishPath
+  type: string
+
+steps:
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish $(artifactName)'
+  inputs:
+    pathToPublish: $(publishPath)
+    artifactName: $(artifactName)
+    artifactType: 'Container'
+    parallel: true
+    parallelCount: 8

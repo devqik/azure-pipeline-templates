@@ -1,0 +1,26 @@
+# Template: docker-login.yml
+# Description: Logs into a Docker registry using a service connection
+# Parameters:
+# - containerServiceConnection: Name of the Docker service connection
+# - sharedContainerServiceConnection: (Optional) Name of the shared Docker service connection
+
+parameters:
+- name: containerServiceConnection
+  type: string
+- name: sharedContainerServiceConnection
+  type: string
+  default: ''
+
+steps:
+- task: Docker@2
+  displayName: 'Login to Docker Registry'
+  inputs:
+    command: login
+    containerRegistry: ${{ parameters.containerServiceConnection }}
+
+- ${{ if ne(parameters.sharedContainerServiceConnection, '') }}:
+  - task: Docker@2
+    displayName: 'Login to Shared Docker Registry'
+    inputs:
+      command: login
+      containerRegistry: ${{ parameters.sharedContainerServiceConnection }}

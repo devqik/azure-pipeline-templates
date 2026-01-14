@@ -1,0 +1,37 @@
+# Template: angular-variables.yml
+# Description: Angular-specific variables for Angular projects
+# Usage: Include this template in your Angular pipeline
+
+variables:
+  # Node.js Configuration
+  nodeVersion: '18'
+  npmVersion: '9'
+  
+  # Angular Configuration
+  angularVersion: '16'
+  projectPath: '.'
+  buildConfiguration: 'production'
+  
+  # Build Configuration
+  buildOptimization: true
+  sourceMap: false
+  cacheDependencies: true
+  
+  # Test Configuration
+  testType: 'all'
+  headless: true
+  parallelTests: true
+  coverageThreshold: 80
+  
+  # Build Artifacts
+  artifactName: 'angular-artifacts'
+  distPath: 'dist/**/*'
+  
+  # Code Quality
+  lintingEnabled: true
+  prettierEnabled: true
+  sonarQubeEnabled: true
+  
+  # Performance
+  bundleAnalyzerEnabled: false
+  compressionEnabled: true

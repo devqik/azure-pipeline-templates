@@ -1,0 +1,71 @@
+# Template: angular-build-job.yml
+# Description: Standard Angular build job with Node.js support
+# Parameters:
+# - nodeVersion: Node.js version to use (default: '18')
+# - buildConfiguration: Build configuration ('development', 'staging', 'production', default: 'production')
+# - projectPath: Path to Angular project (default: '.')
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - artifactName: Name for published artifacts (default: 'angular-artifacts')
+# - buildOptimization: Whether to enable build optimization (default: true)
+# - sourceMap: Whether to generate source maps (default: false for production)
+# - cacheDependencies: Whether to cache node_modules (default: true)
+
+parameters:
+- name: nodeVersion
+  type: string
+  default: '18'
+- name: buildConfiguration
+  type: string
+  default: 'production'
+  values: ['development', 'staging', 'production']
+- name: projectPath
+  type: string
+  default: '.'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: artifactName
+  type: string
+  default: 'angular-artifacts'
+- name: buildOptimization
+  type: boolean
+  default: true
+- name: sourceMap
+  type: boolean
+  default: false
+- name: cacheDependencies
+  type: boolean
+  default: true
+
+jobs:
+- job: AngularBuild
+  displayName: 'Angular Build'
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+  
+  variables:
+    buildConfiguration: ${{ parameters.buildConfiguration }}
+    projectPath: ${{ parameters.projectPath }}
+    artifactName: ${{ parameters.artifactName }}
+    nodeVersion: ${{ parameters.nodeVersion }}
+    buildOptimization: ${{ parameters.buildOptimization }}
+    sourceMap: ${{ parameters.sourceMap }}
+    cacheDependencies: ${{ parameters.cacheDependencies }}
+  
+  steps:
+  - template: steps/setup-nodejs.yml@templates
+    parameters:
+      nodeVersion: $(nodeVersion)
+  
+  - template: steps/angular-build-steps.yml@templates
+    parameters:
+      buildConfiguration: $(buildConfiguration)
+      projectPath: $(projectPath)
+      buildOptimization: $(buildOptimization)
+      sourceMap: $(sourceMap)
+      cacheDependencies: $(cacheDependencies)
+  
+  - template: steps/publish-artifacts.yml@templates
+    parameters:
+      artifactName: $(artifactName)
+      publishPath: 'dist/**/*'

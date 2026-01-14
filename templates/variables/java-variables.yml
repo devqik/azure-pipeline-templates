@@ -1,0 +1,33 @@
+# Template: java-variables.yml
+# Description: Java-specific variables for Java projects
+# Usage: Include this template in your Java pipeline
+
+variables:
+  # Java Configuration
+  javaVersion: '11'
+  buildTool: 'maven'
+  projectPath: '**/pom.xml'
+  
+  # Maven Configuration
+  mavenGoals: 'clean compile test package'
+  mavenOptions: '-Dmaven.test.skip=false'
+  mavenVersion: '3.8.6'
+  
+  # Gradle Configuration
+  gradleTasks: 'build'
+  gradleOptions: '-Xmx3072m'
+  gradleVersion: '7.6'
+  
+  # Test Configuration
+  testType: 'all'
+  parallelTests: true
+  coverageThreshold: 80
+  
+  # Build Artifacts
+  artifactName: 'java-artifacts'
+  jarPattern: '**/target/*.jar'
+  
+  # Code Quality
+  sonarQubeEnabled: true
+  spotBugsEnabled: true
+  checkstyleEnabled: true

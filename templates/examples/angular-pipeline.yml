@@ -1,0 +1,52 @@
+# Example: Angular Pipeline
+# Description: Complete CI/CD pipeline for Angular project
+# Usage: Copy this file to your project and customize as needed
+
+trigger:
+  branches:
+    include: ['main', 'develop']
+  paths:
+    include: ['src/**', 'package.json', 'angular.json', 'azure-pipelines.yml']
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: DevOps/Templates
+      endpoint: SharedTemplates-ServiceConnection
+      ref: refs/heads/main
+
+variables:
+  - template: variables/common-variables.yml@templates
+  - template: variables/angular-variables.yml@templates
+
+stages:
+  - template: stages/angular-ci-stage.yml@templates
+    parameters:
+      nodeVersion: '18'
+      buildConfiguration: 'production'
+      projectPath: '.'
+      vmImage: 'ubuntu-latest'
+      runTests: true
+      testType: 'all'
+      coverageThreshold: 80
+      buildOptimization: true
+
+  - stage: Deploy
+    displayName: 'Deploy to Staging'
+    dependsOn: AngularCI
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployToStaging
+        displayName: 'Deploy to Staging Environment'
+        environment: 'staging'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: angular-build-artifacts
+                - script: |
+                    echo "Deploying Angular application to staging..."
+                    # Add your deployment steps here
+                  displayName: 'Deploy Application'

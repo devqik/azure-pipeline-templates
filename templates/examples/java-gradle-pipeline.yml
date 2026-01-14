@@ -1,0 +1,52 @@
+# Example: Java Gradle Pipeline
+# Description: Complete CI/CD pipeline for Java Gradle project
+# Usage: Copy this file to your project and customize as needed
+
+trigger:
+  branches:
+    include: ['main', 'develop']
+  paths:
+    include: ['src/**', 'build.gradle', 'azure-pipelines.yml']
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: DevOps/Templates
+      endpoint: SharedTemplates-ServiceConnection
+      ref: refs/heads/main
+
+variables:
+  - template: variables/common-variables.yml@templates
+  - template: variables/java-variables.yml@templates
+
+stages:
+  - template: stages/java-ci-stage.yml@templates
+    parameters:
+      buildTool: 'gradle'
+      buildConfiguration: 'release'
+      projectPath: 'build.gradle'
+      vmImage: 'ubuntu-latest'
+      javaVersion: '11'
+      runTests: true
+      testType: 'all'
+      coverageThreshold: 80
+
+  - stage: Deploy
+    displayName: 'Deploy to Staging'
+    dependsOn: JavaCI
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployToStaging
+        displayName: 'Deploy to Staging Environment'
+        environment: 'staging'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: java-build-artifacts
+                - script: |
+                    echo "Deploying Java application to staging..."
+                    # Add your deployment steps here
+                  displayName: 'Deploy Application'

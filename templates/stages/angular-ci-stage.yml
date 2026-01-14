@@ -1,0 +1,81 @@
+# Template: angular-ci-stage.yml
+# Description: Complete Angular CI stage with build and test jobs
+# Parameters:
+# - nodeVersion: Node.js version to use (default: '18')
+# - buildConfiguration: Build configuration ('development', 'staging', 'production', default: 'production')
+# - projectPath: Path to Angular project (default: '.')
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - runTests: Whether to run tests (default: true)
+# - testType: Type of tests to run ('unit', 'e2e', 'all', default: 'all')
+# - coverageThreshold: Minimum code coverage percentage (default: 80)
+# - buildOptimization: Whether to enable build optimization (default: true)
+# - runLint: Whether to run linting (default: true)
+# - lintAllowFailure: Whether lint failures should not fail the pipeline (default: true)
+
+parameters:
+- name: nodeVersion
+  type: string
+  default: '18'
+- name: buildConfiguration
+  type: string
+  default: 'production'
+  values: ['development', 'staging', 'production']
+- name: projectPath
+  type: string
+  default: '.'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: runTests
+  type: boolean
+  default: true
+- name: testType
+  type: string
+  default: 'all'
+  values: ['unit', 'e2e', 'all']
+- name: coverageThreshold
+  type: number
+  default: 80
+- name: buildOptimization
+  type: boolean
+  default: true
+- name: runLint
+  type: boolean
+  default: true
+- name: lintAllowFailure
+  type: boolean
+  default: true
+
+stages:
+- stage: AngularCI
+  displayName: 'Angular CI'
+  jobs:
+  - ${{ if parameters.runLint }}:
+    - template: jobs/angular-lint-job.yml@templates
+      parameters:
+        nodeVersion: ${{ parameters.nodeVersion }}
+        projectPath: ${{ parameters.projectPath }}
+        vmImage: ${{ parameters.vmImage }}
+        lintScript: 'lint'
+        continueOnError: ${{ parameters.lintAllowFailure }}
+  - template: jobs/angular-build-job.yml@templates
+    parameters:
+      nodeVersion: ${{ parameters.nodeVersion }}
+      buildConfiguration: ${{ parameters.buildConfiguration }}
+      projectPath: ${{ parameters.projectPath }}
+      vmImage: ${{ parameters.vmImage }}
+      buildOptimization: ${{ parameters.buildOptimization }}
+      sourceMap: false
+      cacheDependencies: true
+      artifactName: 'angular-build-artifacts'
+
+  - ${{ if parameters.runTests }}:
+    - template: jobs/angular-test-job.yml@templates
+      parameters:
+        nodeVersion: ${{ parameters.nodeVersion }}
+        projectPath: ${{ parameters.projectPath }}
+        vmImage: ${{ parameters.vmImage }}
+        testType: ${{ parameters.testType }}
+        coverageThreshold: ${{ parameters.coverageThreshold }}
+        headless: true
+        parallelTests: true

@@ -1,0 +1,49 @@
+# Template: angular-test-steps.yml
+# Description: Angular test steps for running unit and e2e tests
+# Parameters:
+# - projectPath: Path to Angular project
+# - testType: Type of tests to run ('unit', 'e2e', 'all')
+# - coverageThreshold: Minimum code coverage percentage
+# - headless: Whether to run tests in headless mode
+# - parallelTests: Whether to run tests in parallel
+
+parameters:
+- name: projectPath
+  type: string
+- name: testType
+  type: string
+- name: coverageThreshold
+  type: number
+- name: headless
+  type: boolean
+- name: parallelTests
+  type: boolean
+
+steps:
+- ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
+  - script: |
+      cd $(projectPath)
+      npm run test -- --watch=false --code-coverage --browsers=ChromeHeadless
+    displayName: 'Run unit tests with coverage'
+
+- ${{ if or(eq(parameters.testType, 'e2e'), eq(parameters.testType, 'all')) }}:
+  - script: |
+      cd $(projectPath)
+      npm run e2e -- --headless=$(headless)
+    displayName: 'Run e2e tests'
+
+- ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage'
+    inputs:
+      codeCoverageTool: 'Cobertura'
+      summaryFileLocation: '$(projectPath)/coverage/cobertura-coverage.xml'
+      reportDirectory: '$(projectPath)/coverage'
+
+- ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
+  - script: |
+      cd $(projectPath)
+      echo "Checking code coverage threshold..."
+      npm run test:coverage-check -- --threshold=$(coverageThreshold)
+    displayName: 'Check coverage threshold'
+    continueOnError: false

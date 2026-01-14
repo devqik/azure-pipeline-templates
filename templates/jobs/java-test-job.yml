@@ -1,0 +1,61 @@
+# Template: java-test-job.yml
+# Description: Java unit and integration testing job
+# Parameters:
+# - buildTool: Build tool to use ('maven' or 'gradle', default: 'maven')
+# - projectPath: Path to project files (default: '**/pom.xml' for Maven, '**/build.gradle' for Gradle)
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - testType: Type of tests to run ('unit', 'integration', 'all', default: 'all')
+# - coverageThreshold: Minimum code coverage percentage (default: 80)
+# - parallelTests: Whether to run tests in parallel (default: true)
+
+parameters:
+- name: buildTool
+  type: string
+  default: 'maven'
+  values: ['maven', 'gradle']
+- name: projectPath
+  type: string
+  default: '**/pom.xml'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: testType
+  type: string
+  default: 'all'
+  values: ['unit', 'integration', 'all']
+- name: coverageThreshold
+  type: number
+  default: 80
+- name: parallelTests
+  type: boolean
+  default: true
+
+jobs:
+- job: JavaTest
+  displayName: 'Java Tests'
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+  
+  variables:
+    projectPath: ${{ parameters.projectPath }}
+    testType: ${{ parameters.testType }}
+    coverageThreshold: ${{ parameters.coverageThreshold }}
+    parallelTests: ${{ parameters.parallelTests }}
+  
+  steps:
+  - template: steps/setup-java.yml@templates
+    parameters:
+      javaVersion: '11'
+  
+  - template: steps/java-test-steps.yml@templates
+    parameters:
+      buildTool: ${{ parameters.buildTool }}
+      projectPath: $(projectPath)
+      testType: $(testType)
+      coverageThreshold: $(coverageThreshold)
+      parallelTests: $(parallelTests)
+  
+  - template: steps/publish-test-results.yml@templates
+    parameters:
+      testResultsFormat: ${{ if eq(parameters.buildTool, 'maven') }}'JUnit'${{ else }}'JUnit'${{ endif }}
+      testResultsFiles: ${{ if eq(parameters.buildTool, 'maven') }}'**/target/surefire-reports/*.xml'${{ else }}'**/build/test-results/test/*.xml'${{ endif }}

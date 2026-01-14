@@ -1,0 +1,22 @@
+# Template: setup-nodejs.yml
+# Description: Setup Node.js environment with specified version
+# Parameters:
+# - nodeVersion: Node.js version to install (default: '18')
+
+parameters:
+- name: nodeVersion
+  type: string
+  default: '18'
+
+steps:
+- task: NodeTool@0
+  displayName: 'Setup Node.js $(nodeVersion)'
+  inputs:
+    versionSpec: $(nodeVersion)
+
+- script: |
+    echo "Node.js version:"
+    node --version
+    echo "npm version:"
+    npm --version
+  displayName: 'Verify Node.js and npm installation'

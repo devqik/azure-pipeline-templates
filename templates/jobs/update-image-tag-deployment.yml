@@ -1,0 +1,77 @@
+# Template: update-image-tag-deployment.yml
+# Description: Deployment job that updates image tag in Helm values.yaml and pushes to branch
+# Parameters:
+# - deploymentName: Deployment job name (default: 'UpdateImageTag')
+# - displayName: Display name for the deployment
+# - environment: Target environment name (e.g., 'Staging')
+# - poolName: Agent pool name (default: 'LinuxDevOps')
+# - demands: Agent demands list (default: ['devops_repo'])
+# - devopsSshBase: Base SSH URL to Azure DevOps host (default: 'ssh://devops.example.com:22/')
+# - organizationName: Org/collection name (default: 'DefaultCollection')
+# - projectName: Azure DevOps project name (default: 'YourProject')
+# - repoName: Repository name
+# - helmRepoName: Local folder name of the Helm repo after clone
+# - valuesFilePath: Full path to values.yaml to edit
+# - helmBranchName: Branch name to push changes to
+# - tag: New image tag value
+
+parameters:
+- name: deploymentName
+  type: string
+  default: 'UpdateImageTag'
+- name: displayName
+  type: string
+  default: 'Update Image Tag'
+- name: environment
+  type: string
+  default: 'Staging'
+- name: poolName
+  type: string
+  default: 'LinuxDevOps'
+- name: demands
+  type: object
+  default:
+  - 'devops_repo'
+- name: devopsSshBase
+  type: string
+  default: 'ssh://devops.example.com:22/'
+- name: organizationName
+  type: string
+  default: 'DefaultCollection'
+- name: projectName
+  type: string
+  default: 'YourProject'
+- name: repoName
+  type: string
+- name: helmRepoName
+  type: string
+  default: 'HelmRepository'
+- name: valuesFilePath
+  type: string
+- name: helmBranchName
+  type: string
+- name: tag
+  type: string
+
+jobs:
+- deployment: ${{ parameters.deploymentName }}
+  displayName: ${{ parameters.displayName }}
+  environment: ${{ parameters.environment }}
+  pool:
+    name: ${{ parameters.poolName }}
+    demands: ${{ parameters.demands }}
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - checkout: self
+        - template: ../steps/update-image-tag.yml@templates
+          parameters:
+            devopsSshBase: ${{ parameters.devopsSshBase }}
+            organizationName: ${{ parameters.organizationName }}
+            projectName: ${{ parameters.projectName }}
+            repoName: ${{ parameters.repoName }}
+            helmRepoName: ${{ parameters.helmRepoName }}
+            valuesFilePath: ${{ parameters.valuesFilePath }}
+            helmBranchName: ${{ parameters.helmBranchName }}
+            tag: ${{ parameters.tag }}

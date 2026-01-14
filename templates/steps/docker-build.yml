@@ -1,0 +1,35 @@
+# Template: docker-build.yml
+# Description: Builds a Docker image
+# Parameters:
+# - imageRepository: Docker repository name
+# - dockerfilePath: Path to Dockerfile
+# - buildContext: Build context path
+# - tag: Image tag to apply
+# - additionalArguments: Additional arguments to pass to docker build (optional)
+
+parameters:
+- name: imageRepository
+  type: string
+- name: dockerfilePath
+  type: string
+- name: buildContext
+  type: string
+- name: tag
+  type: string
+- name: additionalArguments
+  type: string
+  default: ''
+
+steps:
+- task: Docker@2
+  displayName: 'Build Docker Image'
+  env:
+    DOCKER_BUILDKIT: 1
+  inputs:
+    repository: ${{ parameters.imageRepository }}
+    command: build
+    Dockerfile: ${{ parameters.dockerfilePath }}
+    buildContext: ${{ parameters.buildContext }}
+    arguments: ${{ parameters.additionalArguments }}
+    tags: |
+      ${{ parameters.tag }}

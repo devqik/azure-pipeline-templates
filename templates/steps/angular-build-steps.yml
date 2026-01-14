@@ -1,0 +1,47 @@
+# Template: angular-build-steps.yml
+# Description: Angular build steps for building Angular applications
+# Parameters:
+# - buildConfiguration: Build configuration ('development', 'staging', 'production')
+# - projectPath: Path to Angular project
+# - buildOptimization: Whether to enable build optimization
+# - sourceMap: Whether to generate source maps
+# - cacheDependencies: Whether to cache node_modules
+
+parameters:
+- name: buildConfiguration
+  type: string
+- name: projectPath
+  type: string
+- name: buildOptimization
+  type: boolean
+- name: sourceMap
+  type: boolean
+- name: cacheDependencies
+  type: boolean
+
+steps:
+- ${{ if parameters.cacheDependencies }}:
+  - task: Cache@2
+    displayName: 'Cache node_modules'
+    inputs:
+      key: 'npm | "$(Agent.OS)" | package-lock.json'
+      restoreKeys: |
+        npm | "$(Agent.OS)"
+      path: '$(projectPath)/node_modules'
+
+- script: |
+    cd $(projectPath)
+    npm ci
+  displayName: 'Install dependencies'
+
+- script: |
+    cd $(projectPath)
+    npm run build -- --configuration=$(buildConfiguration) ${{ if parameters.buildOptimization }}--optimization${{ else }}--no-optimization${{ endif }} ${{ if parameters.sourceMap }}--source-map${{ else }}--no-source-map${{ endif }}
+  displayName: 'Build Angular application'
+
+- script: |
+    cd $(projectPath)
+    echo "Build completed successfully"
+    echo "Build artifacts location: dist/"
+    ls -la dist/
+  displayName: 'Verify build artifacts'

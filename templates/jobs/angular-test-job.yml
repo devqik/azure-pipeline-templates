@@ -1,0 +1,65 @@
+# Template: angular-test-job.yml
+# Description: Angular unit and e2e testing job
+# Parameters:
+# - nodeVersion: Node.js version to use (default: '18')
+# - projectPath: Path to Angular project (default: '.')
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - testType: Type of tests to run ('unit', 'e2e', 'all', default: 'all')
+# - coverageThreshold: Minimum code coverage percentage (default: 80)
+# - headless: Whether to run tests in headless mode (default: true)
+# - parallelTests: Whether to run tests in parallel (default: true)
+
+parameters:
+- name: nodeVersion
+  type: string
+  default: '18'
+- name: projectPath
+  type: string
+  default: '.'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: testType
+  type: string
+  default: 'all'
+  values: ['unit', 'e2e', 'all']
+- name: coverageThreshold
+  type: number
+  default: 80
+- name: headless
+  type: boolean
+  default: true
+- name: parallelTests
+  type: boolean
+  default: true
+
+jobs:
+- job: AngularTest
+  displayName: 'Angular Tests'
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+  
+  variables:
+    projectPath: ${{ parameters.projectPath }}
+    testType: ${{ parameters.testType }}
+    coverageThreshold: ${{ parameters.coverageThreshold }}
+    headless: ${{ parameters.headless }}
+    parallelTests: ${{ parameters.parallelTests }}
+  
+  steps:
+  - template: steps/setup-nodejs.yml@templates
+    parameters:
+      nodeVersion: $(nodeVersion)
+  
+  - template: steps/angular-test-steps.yml@templates
+    parameters:
+      projectPath: $(projectPath)
+      testType: $(testType)
+      coverageThreshold: $(coverageThreshold)
+      headless: $(headless)
+      parallelTests: $(parallelTests)
+  
+  - template: steps/publish-test-results.yml@templates
+    parameters:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: '**/test-results/*.xml'

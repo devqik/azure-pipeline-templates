@@ -1,0 +1,21 @@
+# Template: publish-test-results.yml
+# Description: Publish test results
+# Parameters:
+# - testResultsFormat: Format of test results ('JUnit', 'NUnit', 'VSTest', etc.)
+# - testResultsFiles: Path pattern to test result files
+
+parameters:
+- name: testResultsFormat
+  type: string
+- name: testResultsFiles
+  type: string
+
+steps:
+- task: PublishTestResults@2
+  displayName: 'Publish Test Results'
+  inputs:
+    testResultsFormat: $(testResultsFormat)
+    testResultsFiles: $(testResultsFiles)
+    mergeTestResults: true
+    testRunTitle: 'Test Results'
+    failTaskOnFailedTests: false

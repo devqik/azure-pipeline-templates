@@ -1,0 +1,76 @@
+# Template: docker-build-scan-push-stage.yml
+# Description: Stage that builds, scans, and pushes a Docker image
+# Parameters mirror the job template plus stage naming/display options.
+
+parameters:
+- name: stageName
+  type: string
+  default: 'BuildAndScan'
+- name: displayName
+  type: string
+  default: 'Build, Scan, and Push Image, Email Report'
+- name: containerServiceConnection
+  type: string
+- name: sharedContainerServiceConnection
+  type: string
+  default: ''
+- name: imageRepository
+  type: string
+- name: containerRegistry
+  type: string
+  default: 'docker.example.com:5000/'
+- name: dockerfilePath
+  type: string
+  default: 'Dockerfile'
+- name: buildContext
+  type: string
+  default: '$(Build.SourcesDirectory)'
+- name: tag
+  type: string
+- name: poolName
+  type: string
+  default: 'Linux'
+- name: demands
+  type: object
+  default:
+  - 'docker_repo'
+- name: qualysPath
+  type: string
+  default: '/devops/qscanner/linux-amd64/'
+- name: qualysOutputPath
+  type: string
+  default: '/devops/qscanner/data/'
+- name: enableCache
+  type: boolean
+  default: false
+- name: cacheFromTag
+  type: string
+  default: 'cache'
+- name: pushCache
+  type: boolean
+  default: false
+ - name: buildArguments
+  type: string
+  default: ''
+
+stages:
+- stage: ${{ parameters.stageName }}
+  displayName: ${{ parameters.displayName }}
+  jobs:
+  - template: ../jobs/docker-build-scan-push-job.yml@templates
+    parameters:
+      containerServiceConnection: ${{ parameters.containerServiceConnection }}
+      sharedContainerServiceConnection: ${{ parameters.sharedContainerServiceConnection }}
+      imageRepository: ${{ parameters.imageRepository }}
+      containerRegistry: ${{ parameters.containerRegistry }}
+      dockerfilePath: ${{ parameters.dockerfilePath }}
+      buildContext: ${{ parameters.buildContext }}
+      tag: ${{ parameters.tag }}
+      poolName: ${{ parameters.poolName }}
+      demands: ${{ parameters.demands }}
+      qualysPath: ${{ parameters.qualysPath }}
+      qualysOutputPath: ${{ parameters.qualysOutputPath }}
+      enableCache: ${{ parameters.enableCache }}
+      cacheFromTag: ${{ parameters.cacheFromTag }}
+      pushCache: ${{ parameters.pushCache }}
+      buildArguments: ${{ parameters.buildArguments }}

@@ -1,0 +1,50 @@
+# Template: angular-lint-job.yml
+# Description: Angular lint job running ESLint via npm script
+# Parameters:
+# - nodeVersion: Node.js version to use (default: '18')
+# - projectPath: Path to Angular project (default: '.')
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - lintScript: npm script to run for linting (default: 'lint')
+# - continueOnError: whether to continue on lint errors (default: false)
+
+parameters:
+- name: nodeVersion
+  type: string
+  default: '18'
+- name: projectPath
+  type: string
+  default: '.'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: lintScript
+  type: string
+  default: 'lint'
+- name: continueOnError
+  type: boolean
+  default: false
+
+jobs:
+- job: AngularLint
+  displayName: 'Angular Lint'
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+
+  variables:
+    projectPath: ${{ parameters.projectPath }}
+    nodeVersion: ${{ parameters.nodeVersion }}
+    lintScript: ${{ parameters.lintScript }}
+    continueOnError: ${{ parameters.continueOnError }}
+
+  steps:
+  - template: steps/setup-nodejs.yml@templates
+    parameters:
+      nodeVersion: $(nodeVersion)
+
+  - template: steps/angular-lint-steps.yml@templates
+    parameters:
+      projectPath: $(projectPath)
+      lintScript: $(lintScript)
+      continueOnError: ${{ variables.continueOnError }}
+
+

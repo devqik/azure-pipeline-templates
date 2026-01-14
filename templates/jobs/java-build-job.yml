@@ -1,0 +1,71 @@
+# Template: java-build-job.yml
+# Description: Standard Java build job with Maven/Gradle support
+# Parameters:
+# - buildTool: Build tool to use ('maven' or 'gradle', default: 'maven')
+# - buildConfiguration: Build configuration ('debug' or 'release', default: 'release')
+# - projectPath: Path to project files (default: '**/pom.xml' for Maven, '**/build.gradle' for Gradle)
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - artifactName: Name for published artifacts (default: 'java-artifacts')
+# - javaVersion: Java version to use (default: '11')
+# - skipTests: Whether to skip tests (default: false)
+# - publishTestResults: Whether to publish test results (default: true)
+
+parameters:
+- name: buildTool
+  type: string
+  default: 'maven'
+  values: ['maven', 'gradle']
+- name: buildConfiguration
+  type: string
+  default: 'release'
+  values: ['debug', 'release']
+- name: projectPath
+  type: string
+  default: '**/pom.xml'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: artifactName
+  type: string
+  default: 'java-artifacts'
+- name: javaVersion
+  type: string
+  default: '11'
+- name: skipTests
+  type: boolean
+  default: false
+- name: publishTestResults
+  type: boolean
+  default: true
+
+jobs:
+- job: JavaBuild
+  displayName: 'Java Build'
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+  
+  variables:
+    buildConfiguration: ${{ parameters.buildConfiguration }}
+    projectPath: ${{ parameters.projectPath }}
+    artifactName: ${{ parameters.artifactName }}
+    javaVersion: ${{ parameters.javaVersion }}
+    skipTests: ${{ parameters.skipTests }}
+    publishTestResults: ${{ parameters.publishTestResults }}
+  
+  steps:
+  - template: steps/setup-java.yml@templates
+    parameters:
+      javaVersion: $(javaVersion)
+  
+  - template: steps/java-build-steps.yml@templates
+    parameters:
+      buildTool: ${{ parameters.buildTool }}
+      buildConfiguration: $(buildConfiguration)
+      projectPath: $(projectPath)
+      skipTests: $(skipTests)
+      publishTestResults: $(publishTestResults)
+  
+  - template: steps/publish-artifacts.yml@templates
+    parameters:
+      artifactName: $(artifactName)
+      publishPath: ${{ if eq(parameters.buildTool, 'maven') }}'target/*.jar'${{ else }}'build/libs/*.jar'${{ endif }}

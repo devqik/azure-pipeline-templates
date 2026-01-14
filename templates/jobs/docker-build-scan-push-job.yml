@@ -1,0 +1,126 @@
+# Template: docker-build-scan-push-job.yml
+# Description: Builds a Docker image, scans it with Qualys, and pushes it to a registry
+# Parameters:
+# - jobName: Job name (default: 'BuildScanPushImage')
+# - displayName: Job display name
+# - poolName: Agent pool name (default: 'Linux')
+# - demands: Agent demands list (default: ['docker_repo'])
+# - containerServiceConnection: Service connection for Docker registry login
+# - sharedContainerServiceConnection: (Optional) Service connection for shared Docker registry login
+# - imageRepository: Docker image repository name
+# - containerRegistry: Docker registry URL prefix (e.g., 'docker.example.com:5000/')
+# - dockerfilePath: Path to Dockerfile
+# - buildContext: Build context path (default: '$(Build.SourcesDirectory)')
+# - tag: Image tag
+# - qualysPath: Path to Qualys qscanner directory
+# - qualysOutputPath: Path where Qualys scan results will be stored
+# - enableCache: Whether to enable build cache (default: false)
+# - cacheFromTag: Tag to use for cache-from (e.g., 'cache')
+# - pushCache: Whether to push a cache image after build (default: false)
+
+parameters:
+- name: jobName
+  type: string
+  default: 'BuildScanPushImage'
+- name: displayName
+  type: string
+  default: 'Build, Scan, and Push Image'
+- name: poolName
+  type: string
+  default: 'Linux'
+- name: demands
+  type: object
+  default:
+  - 'docker_repo'
+- name: containerServiceConnection
+  type: string
+- name: sharedContainerServiceConnection
+  type: string
+  default: ''
+- name: imageRepository
+  type: string
+- name: containerRegistry
+  type: string
+  default: 'docker.example.com:5000/'
+- name: dockerfilePath
+  type: string
+  default: 'Dockerfile'
+- name: buildContext
+  type: string
+  default: '$(Build.SourcesDirectory)'
+- name: tag
+  type: string
+- name: qualysPath
+  type: string
+  default: '/devops/qscanner/linux-amd64/'
+- name: qualysOutputPath
+  type: string
+  default: '/devops/qscanner/data/'
+- name: enableCache
+  type: boolean
+  default: false
+- name: cacheFromTag
+  type: string
+  default: 'cache'
+- name: pushCache
+  type: boolean
+  default: false
+ - name: buildArguments
+  type: string
+  default: ''
+
+jobs:
+- job: ${{ parameters.jobName }}
+  displayName: ${{ parameters.displayName }}
+  pool:
+    name: ${{ parameters.poolName }}
+    demands: ${{ parameters.demands }}
+
+  steps:
+  - checkout: self
+
+  - template: ../steps/docker-login.yml@templates
+    parameters:
+      containerServiceConnection: ${{ parameters.containerServiceConnection }}
+      sharedContainerServiceConnection: ${{ parameters.sharedContainerServiceConnection }}
+
+  - ${{ if eq(parameters.enableCache, true) }}:
+    - script: |
+        docker pull ${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.cacheFromTag }} || echo "No existing cache image"
+      displayName: 'Pull cache image (if exists)'
+
+  - ${{ if eq(parameters.enableCache, true) }}:
+    - template: ../steps/docker-build.yml@templates
+      parameters:
+        imageRepository: ${{ parameters.imageRepository }}
+        dockerfilePath: ${{ parameters.dockerfilePath }}
+        buildContext: ${{ parameters.buildContext }}
+        tag: ${{ parameters.tag }}
+        additionalArguments: '${{ parameters.buildArguments }} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from type=registry,ref=${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.cacheFromTag }}'
+
+  - ${{ if ne(parameters.enableCache, true) }}:
+    - template: ../steps/docker-build.yml@templates
+      parameters:
+        imageRepository: ${{ parameters.imageRepository }}
+        dockerfilePath: ${{ parameters.dockerfilePath }}
+        buildContext: ${{ parameters.buildContext }}
+        tag: ${{ parameters.tag }}
+        additionalArguments: '${{ parameters.buildArguments }}'
+
+  - template: ../steps/qualys-scan.yml@templates
+    parameters:
+      qualysPath: ${{ parameters.qualysPath }}
+      imageReference: '${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.tag }}'
+      outputPath: ${{ parameters.qualysOutputPath }}
+
+  - template: ../steps/docker-push.yml@templates
+    parameters:
+      imageRepository: ${{ parameters.imageRepository }}
+      tag: ${{ parameters.tag }}
+
+  - ${{ if eq(parameters.pushCache, true) }}:
+    - script: |
+        docker tag ${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.tag }} \
+          ${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.cacheFromTag }}
+        docker push ${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.cacheFromTag }}
+      displayName: 'Push cache image'

@@ -1,0 +1,86 @@
+# Template: java-test-steps.yml
+# Description: Java test steps for Maven and Gradle projects
+# Parameters:
+# - buildTool: Build tool to use ('maven' or 'gradle')
+# - projectPath: Path to project files
+# - testType: Type of tests to run ('unit', 'integration', 'all')
+# - coverageThreshold: Minimum code coverage percentage
+# - parallelTests: Whether to run tests in parallel
+
+parameters:
+- name: buildTool
+  type: string
+- name: projectPath
+  type: string
+- name: testType
+  type: string
+- name: coverageThreshold
+  type: number
+- name: parallelTests
+  type: boolean
+
+steps:
+- ${{ if eq(parameters.buildTool, 'maven') }}:
+  - task: Maven@4
+    displayName: 'Maven Unit Tests'
+    condition: ${{ or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}
+    inputs:
+      mavenPomFile: '$(projectPath)'
+      goals: 'test'
+      options: '-Dtest=**/*Test.java -DfailIfNoTests=false'
+      publishJUnitResults: true
+      testResultsFiles: '**/surefire-reports/*.xml'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      mavenVersionOption: 'Default'
+
+- ${{ if eq(parameters.buildTool, 'maven') }}:
+  - task: Maven@4
+    displayName: 'Maven Integration Tests'
+    condition: ${{ or(eq(parameters.testType, 'integration'), eq(parameters.testType, 'all')) }}
+    inputs:
+      mavenPomFile: '$(projectPath)'
+      goals: 'verify'
+      options: '-Dtest=**/*IT.java -DfailIfNoTests=false'
+      publishJUnitResults: true
+      testResultsFiles: '**/failsafe-reports/*.xml'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      mavenVersionOption: 'Default'
+
+- ${{ if eq(parameters.buildTool, 'gradle') }}:
+  - task: Gradle@2
+    displayName: 'Gradle Unit Tests'
+    condition: ${{ or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}
+    inputs:
+      workingDirectory: '$(projectPath)'
+      gradleWrapperFile: 'gradlew'
+      gradleOptions: '-Xmx3072m'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      tasks: 'test'
+      publishJUnitResults: true
+      testResultsFiles: '**/build/test-results/test/*.xml'
+      options: ${{ if parameters.parallelTests }}'--parallel'${{ else }}''${{ endif }}
+
+- ${{ if eq(parameters.buildTool, 'gradle') }}:
+  - task: Gradle@2
+    displayName: 'Gradle Integration Tests'
+    condition: ${{ or(eq(parameters.testType, 'integration'), eq(parameters.testType, 'all')) }}
+    inputs:
+      workingDirectory: '$(projectPath)'
+      gradleWrapperFile: 'gradlew'
+      gradleOptions: '-Xmx3072m'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      tasks: 'integrationTest'
+      publishJUnitResults: true
+      testResultsFiles: '**/build/test-results/integrationTest/*.xml'
+      options: ${{ if parameters.parallelTests }}'--parallel'${{ else }}''${{ endif }}
+
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish Code Coverage'
+  inputs:
+    codeCoverageTool: 'JaCoCo'
+    summaryFileLocation: ${{ if eq(parameters.buildTool, 'maven') }}'**/target/site/jacoco/jacoco.xml'${{ else }}'**/build/reports/jacoco/test/jacocoTestReport.xml'${{ endif }}
+    reportDirectory: ${{ if eq(parameters.buildTool, 'maven') }}'**/target/site/jacoco'${{ else }}'**/build/reports/jacoco/test/html'${{ endif }}

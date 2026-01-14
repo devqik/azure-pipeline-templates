@@ -1,0 +1,47 @@
+# Template: update-image-tag.yml
+# Description: Updates image tag in Helm values.yaml and pushes to the specified branch
+# Parameters:
+# - devopsSshBase: Base SSH URL to Azure DevOps host (default: 'ssh://devops.example.com:22/')
+# - organizationName: Org/collection name (default: 'DefaultCollection')
+# - projectName: Azure DevOps project name (default: 'YourProject')
+# - repoName: Repository name (default: 'YourRepository')
+# - helmRepoName: Local folder name for the Helm repo after clone (default: 'YourProject')
+# - valuesFilePath: Full path to values.yaml to edit
+# - helmBranchName: Branch name to push changes to
+# - tag: New image tag value
+
+parameters:
+- name: devopsSshBase
+  type: string
+  default: 'ssh://devops.example.com:22/'
+- name: organizationName
+  type: string
+  default: 'DefaultCollection'
+- name: projectName
+  type: string
+  default: 'YourProject'
+- name: repoName
+  type: string
+  default: 'YourRepository'
+- name: helmRepoName
+  type: string
+  default: 'YourProject'
+- name: valuesFilePath
+  type: string
+- name: helmBranchName
+  type: string
+  default: 'master'
+- name: tag
+  type: string
+
+steps:
+- script: |
+    git clone "${{ parameters.devopsSshBase }}${{ parameters.organizationName }}/${{ parameters.projectName }}/_git/${{ parameters.repoName }}"
+    sed -i 's/^  tag:.*/  tag: "${{ parameters.tag }}"/' ${{ parameters.valuesFilePath }}
+    cd ${{ parameters.helmRepoName }}
+    pwd
+    ls -la
+    git add .
+    git commit -m "Update image tag to ${{ parameters.tag }}"
+    git push origin HEAD:${{ parameters.helmBranchName }}
+  displayName: 'Update image tag in values.yaml'

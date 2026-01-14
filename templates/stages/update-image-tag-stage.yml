@@ -1,0 +1,63 @@
+# Template: update-image-tag-stage.yml
+# Description: Stage that updates the image tag in Helm values and pushes the change
+
+parameters:
+- name: stageName
+  type: string
+  default: 'UpdateImageTag'
+- name: displayName
+  type: string
+  default: 'Update Image Tag'
+- name: dependsOn
+  type: string
+  default: 'BuildAndScan'
+- name: environment
+  type: string
+  default: 'Staging'
+- name: poolName
+  type: string
+  default: 'LinuxDevOps'
+- name: demands
+  type: object
+  default:
+  - 'devops_repo'
+- name: devopsSshBase
+  type: string
+  default: 'ssh://devops.example.com:22/'
+- name: organizationName
+  type: string
+  default: 'DefaultCollection'
+- name: projectName
+  type: string
+  default: 'YourProject'
+- name: repoName
+  type: string
+- name: helmRepoName
+  type: string
+  default: 'HelmRepository'
+- name: valuesFilePath
+  type: string
+- name: helmBranchName
+  type: string
+- name: tag
+  type: string
+
+stages:
+- stage: ${{ parameters.stageName }}
+  displayName: ${{ parameters.displayName }}
+  dependsOn: ${{ parameters.dependsOn }}
+  jobs:
+  - template: ../jobs/update-image-tag-deployment.yml@templates
+    parameters:
+      displayName: ${{ parameters.displayName }}
+      environment: ${{ parameters.environment }}
+      poolName: ${{ parameters.poolName }}
+      demands: ${{ parameters.demands }}
+      devopsSshBase: ${{ parameters.devopsSshBase }}
+      organizationName: ${{ parameters.organizationName }}
+      projectName: ${{ parameters.projectName }}
+      repoName: ${{ parameters.repoName }}
+      helmRepoName: ${{ parameters.helmRepoName }}
+      valuesFilePath: ${{ parameters.valuesFilePath }}
+      helmBranchName: ${{ parameters.helmBranchName }}
+      tag: ${{ parameters.tag }}

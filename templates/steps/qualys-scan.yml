@@ -1,0 +1,41 @@
+# Template: qualys-scan.yml
+# Description: Scans a container image using Qualys qscanner
+# Parameters:
+# - qualysPath: Path to Qualys qscanner directory
+# - imageReference: Full container image reference (e.g., registry/repo:tag)
+# - outputPath: Output path for scan results
+# - accessToken: Access token for Qualys (default: '$(qualysAccessToken)')
+# - pod: Qualys pod/region identifier (default: 'KSA1')
+# - tags: Tags to attach to scan (default: 'CICD-VA')
+# - skipJavaDbUpdate: Whether to skip Java DB update (default: true)
+
+parameters:
+- name: qualysPath
+  type: string
+- name: imageReference
+  type: string
+- name: outputPath
+  type: string
+- name: accessToken
+  type: string
+  default: '$(qualysAccessToken)'
+- name: pod
+  type: string
+  default: 'KSA1'
+- name: tags
+  type: string
+  default: 'CICD-VA'
+- name: skipJavaDbUpdate
+  type: boolean
+  default: true
+
+steps:
+- script: |
+    cd ${{ parameters.qualysPath }}
+    SKIP_FLAG=""
+    if [ "${{ parameters.skipJavaDbUpdate }}" = "true" ]; then
+      SKIP_FLAG="--skip-java-db-update=true"
+    fi
+    ./qscanner image ${{ parameters.imageReference }} --pod ${{ parameters.pod }} --access-token ${{ parameters.accessToken }} \
+    -o ${{ parameters.outputPath }} $SKIP_FLAG --tags ${{ parameters.tags }}
+  displayName: 'Scan Image Using Qualys'
