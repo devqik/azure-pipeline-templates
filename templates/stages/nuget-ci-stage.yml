@@ -1,0 +1,94 @@
+# Template: nuget-ci-stage.yml
+# Description: Complete NuGet/.NET CI stage with lint, build, and test jobs
+# Parameters:
+# - dotnetVersion: .NET SDK version to use (default: '8.0.x')
+# - buildConfiguration: Build configuration ('Debug' or 'Release', default: 'Release')
+# - projectPath: Path to .NET project or solution (default: '.')
+# - projects: Glob for solution or project files (default: '**/*.sln')
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - runTests: Whether to run tests (default: true)
+# - testType: Type of tests to run ('unit', 'integration', 'all', default: 'all')
+# - coverageThreshold: Minimum code coverage percentage (default: 80)
+# - packPackages: Whether to pack NuGet packages (default: true)
+# - packageVersion: Version to apply when packing (default: empty)
+# - runLint: Whether to run linting (default: true)
+# - lintAllowFailure: Whether lint failures should not fail the pipeline (default: true)
+
+parameters:
+- name: dotnetVersion
+  type: string
+  default: '8.0.x'
+- name: buildConfiguration
+  type: string
+  default: 'Release'
+  values: ['Debug', 'Release']
+- name: projectPath
+  type: string
+  default: '.'
+- name: projects
+  type: string
+  default: '**/*.sln'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: runTests
+  type: boolean
+  default: true
+- name: testType
+  type: string
+  default: 'all'
+  values: ['unit', 'integration', 'all']
+- name: coverageThreshold
+  type: number
+  default: 80
+- name: packPackages
+  type: boolean
+  default: true
+- name: packageVersion
+  type: string
+  default: ''
+- name: runLint
+  type: boolean
+  default: true
+- name: lintAllowFailure
+  type: boolean
+  default: true
+
+stages:
+- stage: NuGetCI
+  displayName: 'NuGet CI'
+  jobs:
+  - ${{ if parameters.runLint }}:
+    - template: jobs/nuget-lint-job.yml@templates
+      parameters:
+        dotnetVersion: ${{ parameters.dotnetVersion }}
+        projectPath: ${{ parameters.projectPath }}
+        projects: ${{ parameters.projects }}
+        vmImage: ${{ parameters.vmImage }}
+        severity: 'warn'
+        continueOnError: ${{ parameters.lintAllowFailure }}
+
+  - template: jobs/nuget-build-job.yml@templates
+    parameters:
+      dotnetVersion: ${{ parameters.dotnetVersion }}
+      buildConfiguration: ${{ parameters.buildConfiguration }}
+      projectPath: ${{ parameters.projectPath }}
+      projects: ${{ parameters.projects }}
+      vmImage: ${{ parameters.vmImage }}
+      cacheDependencies: true
+      packPackages: ${{ parameters.packPackages }}
+      packageVersion: ${{ parameters.packageVersion }}
+      includeSymbols: false
+      artifactName: 'nuget-build-artifacts'
+
+  - ${{ if parameters.runTests }}:
+    - template: jobs/nuget-test-job.yml@templates
+      parameters:
+        dotnetVersion: ${{ parameters.dotnetVersion }}
+        projectPath: ${{ parameters.projectPath }}
+        projects: ${{ parameters.projects }}
+        vmImage: ${{ parameters.vmImage }}
+        testType: ${{ parameters.testType }}
+        coverageThreshold: ${{ parameters.coverageThreshold }}
+        parallelTests: true
+        buildConfiguration: ${{ parameters.buildConfiguration }}

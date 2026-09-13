@@ -1,0 +1,35 @@
+# Template: nuget-variables.yml
+# Description: NuGet/.NET-specific variables for .NET projects
+# Usage: Include this template in your NuGet pipeline
+
+variables:
+  # .NET Configuration
+  dotnetVersion: '8.0.x'
+  projectPath: '.'
+  projects: '**/*.sln'
+  buildConfiguration: 'Release'
+
+  # NuGet Configuration
+  packPackages: true
+  includeSymbols: false
+  packageVersion: ''
+  nugetConfigPath: 'nuget.config'
+  cacheDependencies: true
+
+  # Test Configuration
+  testType: 'all'
+  parallelTests: true
+  coverageThreshold: 80
+
+  # Build Artifacts
+  artifactName: 'nuget-artifacts'
+  packagePath: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
+
+  # Code Quality
+  lintingEnabled: true
+  formatSeverity: 'warn'
+  sonarQubeEnabled: true
+
+  # Feed
+  nugetFeed: ''
+  includeNuGetOrg: true

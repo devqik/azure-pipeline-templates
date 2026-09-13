@@ -1,0 +1,54 @@
+# Example: NuGet Pipeline
+# Description: Complete CI/CD pipeline for a .NET / NuGet project
+# Usage: Copy this file to your project and customize as needed
+
+trigger:
+  branches:
+    include: ['main', 'develop']
+  paths:
+    include: ['src/**', '**/*.csproj', '**/*.sln', 'nuget.config', 'azure-pipelines.yml']
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: DevOps/Templates
+      endpoint: SharedTemplates-ServiceConnection
+      ref: refs/heads/main
+
+variables:
+  - template: variables/common-variables.yml@templates
+  - template: variables/nuget-variables.yml@templates
+
+stages:
+  - template: stages/nuget-ci-stage.yml@templates
+    parameters:
+      dotnetVersion: '8.0.x'
+      buildConfiguration: 'Release'
+      projectPath: '.'
+      projects: '**/*.sln'
+      vmImage: 'ubuntu-latest'
+      runTests: true
+      testType: 'all'
+      coverageThreshold: 80
+      packPackages: true
+      runLint: true
+
+  - stage: Publish
+    displayName: 'Publish NuGet packages'
+    dependsOn: NuGetCI
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: PushPackages
+        displayName: 'Push packages to feed'
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - download: current
+            artifact: nuget-build-artifacts
+          - template: steps/nuget-push-steps.yml@templates
+            parameters:
+              packagesToPush: '$(Pipeline.Workspace)/nuget-build-artifacts/**/*.nupkg;!$(Pipeline.Workspace)/nuget-build-artifacts/**/*.symbols.nupkg'
+              nuGetFeedType: 'internal'
+              publishVstsFeed: 'YourProject/YourFeed'
+              allowPackageConflicts: false

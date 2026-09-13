@@ -1,0 +1,79 @@
+# Template: nuget-build-steps.yml
+# Description: .NET build and pack steps for NuGet packages
+# Parameters:
+# - buildConfiguration: Build configuration ('Debug' or 'Release')
+# - projectPath: Path to .NET project or solution
+# - projects: Glob for solution or project files
+# - cacheDependencies: Whether to cache NuGet packages
+# - packPackages: Whether to pack NuGet packages (.nupkg)
+# - packageVersion: Version to apply when packing
+# - includeSymbols: Whether to include symbol packages
+
+parameters:
+- name: buildConfiguration
+  type: string
+- name: projectPath
+  type: string
+- name: projects
+  type: string
+  default: '**/*.sln'
+- name: cacheDependencies
+  type: boolean
+- name: packPackages
+  type: boolean
+  default: true
+- name: packageVersion
+  type: string
+  default: ''
+- name: includeSymbols
+  type: boolean
+  default: false
+
+steps:
+- ${{ if parameters.cacheDependencies }}:
+  - task: Cache@2
+    displayName: 'Cache NuGet packages'
+    inputs:
+      key: 'nuget | "$(Agent.OS)" | **/packages.lock.json, **/*.csproj, **/*.sln'
+      restoreKeys: |
+        nuget | "$(Agent.OS)"
+      path: '$(Pipeline.Workspace)/.nuget/packages'
+  - script: echo "##vso[task.setvariable variable=NUGET_PACKAGES]$(Pipeline.Workspace)/.nuget/packages"
+    displayName: 'Set NUGET_PACKAGES cache path'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore NuGet packages'
+  inputs:
+    command: 'restore'
+    projects: '$(projects)'
+    workingDirectory: '$(projectPath)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Build .NET project'
+  inputs:
+    command: 'build'
+    projects: '$(projects)'
+    workingDirectory: '$(projectPath)'
+    arguments: '--configuration $(buildConfiguration) --no-restore'
+
+- ${{ if parameters.packPackages }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'Pack NuGet packages'
+    inputs:
+      command: 'pack'
+      packagesToPack: '**/*.csproj'
+      workingDirectory: '$(projectPath)'
+      configurationToPack: '$(buildConfiguration)'
+      nobuild: true
+      outputDir: '$(Build.ArtifactStagingDirectory)'
+      includeSymbols: ${{ parameters.includeSymbols }}
+      includeSource: ${{ parameters.includeSymbols }}
+      versioningScheme: ${{ if eq(parameters.packageVersion, '') }}'off'${{ else }}'byEnvVar'${{ endif }}
+      ${{ if ne(parameters.packageVersion, '') }}:
+        versionEnvVar: 'packageVersion'
+
+- script: |
+    echo "Build completed successfully"
+    echo "NuGet package artifacts:"
+    ls -la "$(Build.ArtifactStagingDirectory)" || true
+  displayName: 'Verify build artifacts'

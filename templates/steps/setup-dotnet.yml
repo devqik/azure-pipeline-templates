@@ -1,0 +1,30 @@
+# Template: setup-dotnet.yml
+# Description: Setup .NET SDK environment with specified version
+# Parameters:
+# - dotnetVersion: .NET SDK version to install (default: '8.0.x')
+# - includePreviewVersions: Whether to include preview SDK versions (default: false)
+
+parameters:
+- name: dotnetVersion
+  type: string
+  default: '8.0.x'
+- name: includePreviewVersions
+  type: boolean
+  default: false
+
+steps:
+- task: UseDotNet@2
+  displayName: 'Setup .NET SDK $(dotnetVersion)'
+  inputs:
+    packageType: 'sdk'
+    version: $(dotnetVersion)
+    includePreviewVersions: ${{ parameters.includePreviewVersions }}
+
+- script: |
+    echo ".NET SDK version:"
+    dotnet --version
+    echo "Installed SDKs:"
+    dotnet --list-sdks
+    echo "Installed runtimes:"
+    dotnet --list-runtimes
+  displayName: 'Verify .NET SDK installation'

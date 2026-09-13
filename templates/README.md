@@ -1,6 +1,6 @@
-# Azure DevOps Templates for Java and Angular Projects
+# Azure DevOps Templates for Java, Angular, and NuGet Projects
 
-This repository contains reusable Azure DevOps pipeline templates for Java and Angular projects. These templates follow DRY (Don't Repeat Yourself) principles and provide standardized CI/CD pipelines across your organization.
+This repository contains reusable Azure DevOps pipeline templates for Java, Angular, and NuGet (.NET) projects. These templates follow DRY (Don't Repeat Yourself) principles and provide standardized CI/CD pipelines across your organization.
 
 ## Repository Structure
 
@@ -10,27 +10,39 @@ This repository contains reusable Azure DevOps pipeline templates for Java and A
 │   ├── java-build-job.yml          # Java build job (Maven/Gradle)
 │   ├── java-test-job.yml           # Java testing job
 │   ├── angular-build-job.yml       # Angular build job
-│   └── angular-test-job.yml        # Angular testing job
+│   ├── angular-test-job.yml        # Angular testing job
+│   ├── angular-lint-job.yml        # Angular lint job
+│   ├── nuget-build-job.yml         # NuGet/.NET build and pack job
+│   ├── nuget-test-job.yml          # NuGet/.NET testing job
+│   └── nuget-lint-job.yml          # NuGet/.NET lint job (dotnet format)
 ├── stages/
 │   ├── java-ci-stage.yml           # Complete Java CI stage
-│   └── angular-ci-stage.yml        # Complete Angular CI stage
+│   ├── angular-ci-stage.yml        # Complete Angular CI stage
+│   └── nuget-ci-stage.yml          # Complete NuGet/.NET CI stage
 ├── steps/
 │   ├── setup-java.yml              # Java environment setup
 │   ├── setup-nodejs.yml            # Node.js environment setup
+│   ├── setup-dotnet.yml            # .NET SDK environment setup
 │   ├── java-build-steps.yml        # Java build steps
 │   ├── java-test-steps.yml         # Java test steps
 │   ├── angular-build-steps.yml     # Angular build steps
 │   ├── angular-test-steps.yml      # Angular test steps
+│   ├── nuget-build-steps.yml       # NuGet restore, build, and pack steps
+│   ├── nuget-test-steps.yml        # NuGet test steps
+│   ├── nuget-lint-steps.yml        # NuGet lint steps (dotnet format)
+│   ├── nuget-push-steps.yml        # Push .nupkg files to a feed
 │   ├── publish-artifacts.yml       # Artifact publishing
 │   └── publish-test-results.yml    # Test results publishing
 ├── variables/
 │   ├── common-variables.yml        # Organization-wide variables
 │   ├── java-variables.yml          # Java-specific variables
-│   └── angular-variables.yml       # Angular-specific variables
+│   ├── angular-variables.yml       # Angular-specific variables
+│   └── nuget-variables.yml         # NuGet/.NET-specific variables
 ├── examples/
 │   ├── java-maven-pipeline.yml     # Example Maven pipeline
 │   ├── java-gradle-pipeline.yml    # Example Gradle pipeline
 │   ├── angular-pipeline.yml        # Example Angular pipeline
+│   ├── nuget-pipeline.yml          # Example NuGet/.NET pipeline
 │   └── multi-project-pipeline.yml  # Example multi-project pipeline
 └── README.md                       # This file
 ```
@@ -129,6 +141,45 @@ stages:
       buildOptimization: true
 ```
 
+### 3. NuGet (.NET) Project
+
+Create `azure-pipelines.yml` in your project root:
+
+```yaml
+trigger:
+  branches:
+    include: ["main", "develop"]
+  paths:
+    include: ["src/**", "**/*.csproj", "**/*.sln", "nuget.config", "azure-pipelines.yml"]
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: DevOps/Templates
+      endpoint: SharedTemplates-ServiceConnection
+      ref: refs/heads/main
+
+variables:
+  - template: variables/common-variables.yml@templates
+  - template: variables/nuget-variables.yml@templates
+
+stages:
+  - template: stages/nuget-ci-stage.yml@templates
+    parameters:
+      dotnetVersion: "8.0.x"
+      buildConfiguration: "Release"
+      projectPath: "."
+      projects: "**/*.sln"
+      vmImage: "ubuntu-latest"
+      runTests: true
+      testType: "all"
+      coverageThreshold: 80
+      packPackages: true
+```
+
+Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Category("Integration")]` (NUnit), or `[TestCategory("Integration")]` (MSTest) so `testType: unit` or `testType: integration` can filter them.
+
 ## Template Parameters
 
 ### Java Build Job Parameters
@@ -179,6 +230,45 @@ stages:
 | `coverageThreshold` | number  | 80              | Minimum code coverage percentage      |
 | `headless`          | boolean | true            | Whether to run tests in headless mode |
 | `parallelTests`     | boolean | true            | Whether to run tests in parallel      |
+
+### NuGet Build Job Parameters
+
+| Parameter            | Type    | Default            | Description                                      |
+| -------------------- | ------- | ------------------ | ------------------------------------------------ |
+| `dotnetVersion`      | string  | '8.0.x'            | .NET SDK version to use                          |
+| `buildConfiguration` | string  | 'Release'          | Build configuration ('Debug' or 'Release')       |
+| `projectPath`        | string  | '.'                | Path to .NET project or solution                 |
+| `projects`           | string  | '\*\*/\*.sln'      | Glob for solution or project files               |
+| `vmImage`            | string  | 'ubuntu-latest'    | Agent VM image                                   |
+| `artifactName`       | string  | 'nuget-artifacts'  | Name for published artifacts                     |
+| `cacheDependencies`  | boolean | true               | Whether to cache NuGet packages                  |
+| `packPackages`       | boolean | true               | Whether to pack `.nupkg` files                   |
+| `packageVersion`     | string  | ''                 | Version to apply when packing (project version if empty) |
+| `includeSymbols`     | boolean | false              | Whether to include symbol packages               |
+
+### NuGet Test Job Parameters
+
+| Parameter            | Type    | Default         | Description                                         |
+| -------------------- | ------- | --------------- | --------------------------------------------------- |
+| `dotnetVersion`      | string  | '8.0.x'         | .NET SDK version to use                             |
+| `projectPath`        | string  | '.'             | Path to .NET project or solution                    |
+| `projects`           | string  | '\*\*/\*.sln'   | Glob for solution or project files                  |
+| `vmImage`            | string  | 'ubuntu-latest' | Agent VM image                                      |
+| `testType`           | string  | 'all'           | Type of tests ('unit', 'integration', 'all')        |
+| `coverageThreshold`  | number  | 80              | Minimum code coverage percentage                    |
+| `parallelTests`      | boolean | true            | Whether to run tests in parallel                    |
+| `buildConfiguration` | string  | 'Release'       | Build configuration ('Debug' or 'Release')          |
+
+### NuGet Lint Job Parameters
+
+| Parameter        | Type    | Default         | Description                                      |
+| ---------------- | ------- | --------------- | ------------------------------------------------ |
+| `dotnetVersion`  | string  | '8.0.x'         | .NET SDK version to use                          |
+| `projectPath`    | string  | '.'             | Path to .NET project or solution                 |
+| `projects`       | string  | '\*\*/\*.sln'   | Glob for solution or project files               |
+| `vmImage`        | string  | 'ubuntu-latest' | Agent VM image                                   |
+| `severity`       | string  | 'warn'          | Minimum severity ('info', 'warn', 'error')       |
+| `continueOnError`| boolean | false           | Whether to continue on lint errors               |
 
 ## Advanced Usage
 
@@ -330,6 +420,7 @@ For issues and questions:
 
 ## Version History
 
+- **v2.2.0**: Added NuGet (.NET) lint, test, build, pack, and publish templates
 - **v2.1.0**: Added Angular support, improved Java templates
 - **v2.0.0**: Major refactoring, added stage templates
 - **v1.0.0**: Initial release with basic Java templates

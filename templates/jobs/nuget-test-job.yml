@@ -1,0 +1,73 @@
+# Template: nuget-test-job.yml
+# Description: .NET unit and integration testing job
+# Parameters:
+# - dotnetVersion: .NET SDK version to use (default: '8.0.x')
+# - projectPath: Path to .NET project or solution (default: '.')
+# - projects: Glob for solution or project files (default: '**/*.sln')
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - testType: Type of tests to run ('unit', 'integration', 'all', default: 'all')
+# - coverageThreshold: Minimum code coverage percentage (default: 80)
+# - parallelTests: Whether to run tests in parallel (default: true)
+# - buildConfiguration: Build configuration ('Debug' or 'Release', default: 'Release')
+
+parameters:
+- name: dotnetVersion
+  type: string
+  default: '8.0.x'
+- name: projectPath
+  type: string
+  default: '.'
+- name: projects
+  type: string
+  default: '**/*.sln'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: testType
+  type: string
+  default: 'all'
+  values: ['unit', 'integration', 'all']
+- name: coverageThreshold
+  type: number
+  default: 80
+- name: parallelTests
+  type: boolean
+  default: true
+- name: buildConfiguration
+  type: string
+  default: 'Release'
+  values: ['Debug', 'Release']
+
+jobs:
+- job: NuGetTest
+  displayName: 'NuGet Tests'
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+
+  variables:
+    projectPath: ${{ parameters.projectPath }}
+    projects: ${{ parameters.projects }}
+    dotnetVersion: ${{ parameters.dotnetVersion }}
+    testType: ${{ parameters.testType }}
+    coverageThreshold: ${{ parameters.coverageThreshold }}
+    parallelTests: ${{ parameters.parallelTests }}
+    buildConfiguration: ${{ parameters.buildConfiguration }}
+
+  steps:
+  - template: steps/setup-dotnet.yml@templates
+    parameters:
+      dotnetVersion: $(dotnetVersion)
+
+  - template: steps/nuget-test-steps.yml@templates
+    parameters:
+      projectPath: $(projectPath)
+      projects: $(projects)
+      testType: ${{ parameters.testType }}
+      coverageThreshold: $(coverageThreshold)
+      parallelTests: ${{ parameters.parallelTests }}
+      buildConfiguration: $(buildConfiguration)
+
+  - template: steps/publish-test-results.yml@templates
+    parameters:
+      testResultsFormat: 'VSTest'
+      testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'

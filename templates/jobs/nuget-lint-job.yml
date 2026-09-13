@@ -1,0 +1,55 @@
+# Template: nuget-lint-job.yml
+# Description: .NET lint job running dotnet format
+# Parameters:
+# - dotnetVersion: .NET SDK version to use (default: '8.0.x')
+# - projectPath: Path to .NET project or solution (default: '.')
+# - projects: Glob for solution or project files (default: '**/*.sln')
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - severity: Minimum severity to report (default: 'warn')
+# - continueOnError: whether to continue on lint errors (default: false)
+
+parameters:
+- name: dotnetVersion
+  type: string
+  default: '8.0.x'
+- name: projectPath
+  type: string
+  default: '.'
+- name: projects
+  type: string
+  default: '**/*.sln'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: severity
+  type: string
+  default: 'warn'
+  values: ['info', 'warn', 'error']
+- name: continueOnError
+  type: boolean
+  default: false
+
+jobs:
+- job: NuGetLint
+  displayName: 'NuGet Lint'
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+
+  variables:
+    projectPath: ${{ parameters.projectPath }}
+    projects: ${{ parameters.projects }}
+    dotnetVersion: ${{ parameters.dotnetVersion }}
+    severity: ${{ parameters.severity }}
+    continueOnError: ${{ parameters.continueOnError }}
+
+  steps:
+  - template: steps/setup-dotnet.yml@templates
+    parameters:
+      dotnetVersion: $(dotnetVersion)
+
+  - template: steps/nuget-lint-steps.yml@templates
+    parameters:
+      projectPath: $(projectPath)
+      projects: $(projects)
+      severity: $(severity)
+      continueOnError: ${{ parameters.continueOnError }}

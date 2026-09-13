@@ -1,0 +1,42 @@
+# Template: nuget-lint-steps.yml
+# Description: .NET lint steps using dotnet format (code style / analyzers)
+# Parameters:
+# - projectPath: Path to .NET project or solution
+# - projects: Glob for solution or project files
+# - continueOnError: whether to continue on lint errors (default: false)
+# - severity: Minimum severity to report ('info', 'warn', 'error')
+
+parameters:
+- name: projectPath
+  type: string
+- name: projects
+  type: string
+  default: '**/*.sln'
+- name: continueOnError
+  type: boolean
+  default: false
+- name: severity
+  type: string
+  default: 'warn'
+
+steps:
+- task: DotNetCoreCLI@2
+  displayName: 'Restore dependencies'
+  inputs:
+    command: 'restore'
+    projects: '$(projects)'
+    workingDirectory: '$(projectPath)'
+
+- script: |
+    cd $(projectPath)
+    dotnet format --verify-no-changes --severity $(severity) --verbosity diagnostic
+  displayName: 'Run dotnet format'
+  continueOnError: ${{ parameters.continueOnError }}
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish lint reports (if any)'
+  condition: exists('$(projectPath)/reports')
+  inputs:
+    PathtoPublish: '$(projectPath)/reports'
+    ArtifactName: 'lint-reports'
+    publishLocation: 'Container'

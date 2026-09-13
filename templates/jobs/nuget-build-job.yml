@@ -1,0 +1,84 @@
+# Template: nuget-build-job.yml
+# Description: Standard .NET build job that restores, builds, and packs NuGet packages
+# Parameters:
+# - dotnetVersion: .NET SDK version to use (default: '8.0.x')
+# - buildConfiguration: Build configuration ('Debug' or 'Release', default: 'Release')
+# - projectPath: Path to .NET project or solution (default: '.')
+# - projects: Glob for solution or project files (default: '**/*.sln')
+# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - artifactName: Name for published artifacts (default: 'nuget-artifacts')
+# - cacheDependencies: Whether to cache NuGet packages (default: true)
+# - packPackages: Whether to pack NuGet packages (default: true)
+# - packageVersion: Version to apply when packing (default: empty, uses project version)
+# - includeSymbols: Whether to include symbol packages (default: false)
+
+parameters:
+- name: dotnetVersion
+  type: string
+  default: '8.0.x'
+- name: buildConfiguration
+  type: string
+  default: 'Release'
+  values: ['Debug', 'Release']
+- name: projectPath
+  type: string
+  default: '.'
+- name: projects
+  type: string
+  default: '**/*.sln'
+- name: vmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: artifactName
+  type: string
+  default: 'nuget-artifacts'
+- name: cacheDependencies
+  type: boolean
+  default: true
+- name: packPackages
+  type: boolean
+  default: true
+- name: packageVersion
+  type: string
+  default: ''
+- name: includeSymbols
+  type: boolean
+  default: false
+
+jobs:
+- job: NuGetBuild
+  displayName: 'NuGet Build'
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+
+  variables:
+    buildConfiguration: ${{ parameters.buildConfiguration }}
+    projectPath: ${{ parameters.projectPath }}
+    projects: ${{ parameters.projects }}
+    artifactName: ${{ parameters.artifactName }}
+    dotnetVersion: ${{ parameters.dotnetVersion }}
+    cacheDependencies: ${{ parameters.cacheDependencies }}
+    packPackages: ${{ parameters.packPackages }}
+    packageVersion: ${{ parameters.packageVersion }}
+    includeSymbols: ${{ parameters.includeSymbols }}
+
+  steps:
+  - template: steps/setup-dotnet.yml@templates
+    parameters:
+      dotnetVersion: $(dotnetVersion)
+
+  - template: steps/nuget-build-steps.yml@templates
+    parameters:
+      buildConfiguration: $(buildConfiguration)
+      projectPath: $(projectPath)
+      projects: $(projects)
+      cacheDependencies: ${{ parameters.cacheDependencies }}
+      packPackages: ${{ parameters.packPackages }}
+      packageVersion: ${{ parameters.packageVersion }}
+      includeSymbols: ${{ parameters.includeSymbols }}
+
+  - ${{ if parameters.packPackages }}:
+    - template: steps/publish-artifacts.yml@templates
+      parameters:
+        artifactName: $(artifactName)
+        publishPath: '$(Build.ArtifactStagingDirectory)'

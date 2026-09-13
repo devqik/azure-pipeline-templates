@@ -1,0 +1,103 @@
+# Template: nuget-test-steps.yml
+# Description: .NET test steps for running unit and integration tests with coverage
+# Parameters:
+# - projectPath: Path to .NET project or solution
+# - projects: Glob for test project or solution files
+# - testType: Type of tests to run ('unit', 'integration', 'all')
+# - coverageThreshold: Minimum code coverage percentage
+# - parallelTests: Whether to run tests in parallel
+# - buildConfiguration: Build configuration ('Debug' or 'Release')
+
+parameters:
+- name: projectPath
+  type: string
+- name: projects
+  type: string
+  default: '**/*.sln'
+- name: testType
+  type: string
+- name: coverageThreshold
+  type: number
+- name: parallelTests
+  type: boolean
+- name: buildConfiguration
+  type: string
+  default: 'Release'
+
+steps:
+- task: DotNetCoreCLI@2
+  displayName: 'Restore dependencies'
+  inputs:
+    command: 'restore'
+    projects: '$(projects)'
+    workingDirectory: '$(projectPath)'
+
+- ${{ if eq(parameters.testType, 'unit') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'Run unit tests with coverage'
+    inputs:
+      command: 'test'
+      projects: '$(projects)'
+      workingDirectory: '$(projectPath)'
+      arguments: >-
+        --configuration $(buildConfiguration)
+        --no-restore
+        --filter "Category!=Integration"
+        --logger trx
+        --results-directory $(Agent.TempDirectory)/TestResults
+        --collect:"XPlat Code Coverage"
+        ${{ if parameters.parallelTests }}--maxcpucount:0${{ endif }}
+        -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+- ${{ if eq(parameters.testType, 'integration') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'Run integration tests'
+    inputs:
+      command: 'test'
+      projects: '$(projects)'
+      workingDirectory: '$(projectPath)'
+      arguments: >-
+        --configuration $(buildConfiguration)
+        --no-restore
+        --filter "Category=Integration"
+        --logger trx
+        --results-directory $(Agent.TempDirectory)/TestResults
+        ${{ if parameters.parallelTests }}--maxcpucount:0${{ endif }}
+
+- ${{ if eq(parameters.testType, 'all') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'Run all tests with coverage'
+    inputs:
+      command: 'test'
+      projects: '$(projects)'
+      workingDirectory: '$(projectPath)'
+      arguments: >-
+        --configuration $(buildConfiguration)
+        --no-restore
+        --logger trx
+        --results-directory $(Agent.TempDirectory)/TestResults
+        --collect:"XPlat Code Coverage"
+        ${{ if parameters.parallelTests }}--maxcpucount:0${{ endif }}
+        -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+- ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage'
+    inputs:
+      codeCoverageTool: 'Cobertura'
+      summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+      reportDirectory: '$(Agent.TempDirectory)/TestResults'
+
+- ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
+  - script: |
+      echo "Checking code coverage threshold ($(coverageThreshold)%)..."
+      COVERAGE_FILE=$(find "$(Agent.TempDirectory)/TestResults" -name "coverage.cobertura.xml" | head -n 1)
+      if [ -z "$COVERAGE_FILE" ]; then
+        echo "No coverage file found; skipping threshold check."
+        exit 0
+      fi
+      LINE_RATE=$(python3 -c "import xml.etree.ElementTree as ET; print(float(ET.parse('$COVERAGE_FILE').getroot().attrib.get('line-rate', 0)) * 100)")
+      echo "Line coverage: ${LINE_RATE}%"
+      python3 -c "import sys; sys.exit(0 if float('${LINE_RATE}') >= float('$(coverageThreshold)') else 1)"
+    displayName: 'Check coverage threshold'
+    continueOnError: false
