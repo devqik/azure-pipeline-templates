@@ -5,7 +5,9 @@
 # - buildConfiguration: Build configuration ('Debug' or 'Release', default: 'Release')
 # - projectPath: Path to .NET project or solution (default: '.')
 # - projects: Glob for solution or project files (default: '**/*.sln')
-# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
+# - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
+# - demands: Agent demands for the self-hosted pool (default: [])
 # - runTests: Whether to run tests (default: true)
 # - testType: Type of tests to run ('unit', 'integration', 'all', default: 'all')
 # - coverageThreshold: Minimum code coverage percentage (default: 80)
@@ -31,6 +33,12 @@ parameters:
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
+- name: poolName
+  type: string
+  default: ''
+- name: demands
+  type: object
+  default: []
 - name: runTests
   type: boolean
   default: true
@@ -65,6 +73,8 @@ stages:
         projectPath: ${{ parameters.projectPath }}
         projects: ${{ parameters.projects }}
         vmImage: ${{ parameters.vmImage }}
+        poolName: ${{ parameters.poolName }}
+        demands: ${{ parameters.demands }}
         severity: 'warn'
         continueOnError: ${{ parameters.lintAllowFailure }}
 
@@ -75,6 +85,8 @@ stages:
       projectPath: ${{ parameters.projectPath }}
       projects: ${{ parameters.projects }}
       vmImage: ${{ parameters.vmImage }}
+      poolName: ${{ parameters.poolName }}
+      demands: ${{ parameters.demands }}
       cacheDependencies: true
       packPackages: ${{ parameters.packPackages }}
       packageVersion: ${{ parameters.packageVersion }}
@@ -88,6 +100,8 @@ stages:
         projectPath: ${{ parameters.projectPath }}
         projects: ${{ parameters.projects }}
         vmImage: ${{ parameters.vmImage }}
+        poolName: ${{ parameters.poolName }}
+        demands: ${{ parameters.demands }}
         testType: ${{ parameters.testType }}
         coverageThreshold: ${{ parameters.coverageThreshold }}
         parallelTests: true

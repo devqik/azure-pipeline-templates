@@ -57,6 +57,7 @@ stages:
       dotnetVersion: "8.0.x"
       buildConfiguration: "Release"
       packPackages: true
+      poolName: "Linux" # self-hosted pool; omit to use vmImage
 ```
 
 ## 📁 Project Structure
@@ -108,6 +109,7 @@ stages:
 - **Java Support**: Maven and Gradle builds with comprehensive testing
 - **Angular Support**: Node.js builds with unit and e2e testing
 - **NuGet Support**: .NET restore, build, pack, test, lint, and feed publish
+- **Self-hosted agents**: `poolName` and `demands` on Angular, Java, and NuGet jobs (required on Azure DevOps Server)
 - **Flexible Configuration**: Extensive parameterization for customization
 - **Code Coverage**: Built-in coverage reporting and thresholds
 - **Artifact Management**: Standardized artifact publishing

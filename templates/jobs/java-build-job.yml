@@ -4,7 +4,9 @@
 # - buildTool: Build tool to use ('maven' or 'gradle', default: 'maven')
 # - buildConfiguration: Build configuration ('debug' or 'release', default: 'release')
 # - projectPath: Path to project files (default: '**/pom.xml' for Maven, '**/build.gradle' for Gradle)
-# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
+# - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
+# - demands: Agent demands for the self-hosted pool (default: [])
 # - artifactName: Name for published artifacts (default: 'java-artifacts')
 # - javaVersion: Java version to use (default: '11')
 # - skipTests: Whether to skip tests (default: false)
@@ -25,6 +27,12 @@ parameters:
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
+- name: poolName
+  type: string
+  default: ''
+- name: demands
+  type: object
+  default: []
 - name: artifactName
   type: string
   default: 'java-artifacts'
@@ -41,8 +49,14 @@ parameters:
 jobs:
 - job: JavaBuild
   displayName: 'Java Build'
-  pool:
-    vmImage: ${{ parameters.vmImage }}
+  ${{ if ne(parameters.poolName, '') }}:
+    pool:
+      name: ${{ parameters.poolName }}
+      ${{ if gt(length(parameters.demands), 0) }}:
+        demands: ${{ parameters.demands }}
+  ${{ if eq(parameters.poolName, '') }}:
+    pool:
+      vmImage: ${{ parameters.vmImage }}
   
   variables:
     buildConfiguration: ${{ parameters.buildConfiguration }}

@@ -189,7 +189,9 @@ Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Categ
 | `buildTool`          | string  | 'maven'          | Build tool ('maven' or 'gradle')           |
 | `buildConfiguration` | string  | 'release'        | Build configuration ('debug' or 'release') |
 | `projectPath`        | string  | '\*\*/pom.xml'   | Path to project files                      |
-| `vmImage`            | string  | 'ubuntu-latest'  | Agent VM image                             |
+| `vmImage`            | string  | 'ubuntu-latest'  | Microsoft-hosted VM image (ignored if `poolName` is set) |
+| `poolName`           | string  | ''               | Self-hosted agent pool name                |
+| `demands`            | object  | []               | Agent demands (used with `poolName`)       |
 | `artifactName`       | string  | 'java-artifacts' | Name for published artifacts               |
 | `javaVersion`        | string  | '11'             | Java version to use                        |
 | `skipTests`          | boolean | false            | Whether to skip tests                      |
@@ -202,7 +204,9 @@ Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Categ
 | `nodeVersion`        | string  | '18'                | Node.js version to use               |
 | `buildConfiguration` | string  | 'production'        | Build configuration                  |
 | `projectPath`        | string  | '.'                 | Path to Angular project              |
-| `vmImage`            | string  | 'ubuntu-latest'     | Agent VM image                       |
+| `vmImage`            | string  | 'ubuntu-latest'     | Microsoft-hosted VM image (ignored if `poolName` is set) |
+| `poolName`           | string  | ''                  | Self-hosted agent pool name          |
+| `demands`            | object  | []                  | Agent demands (used with `poolName`) |
 | `artifactName`       | string  | 'angular-artifacts' | Name for published artifacts         |
 | `buildOptimization`  | boolean | true                | Whether to enable build optimization |
 | `sourceMap`          | boolean | false               | Whether to generate source maps      |
@@ -214,7 +218,9 @@ Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Categ
 | ------------------- | ------- | --------------- | -------------------------------------------- |
 | `buildTool`         | string  | 'maven'         | Build tool ('maven' or 'gradle')             |
 | `projectPath`       | string  | '\*\*/pom.xml'  | Path to project files                        |
-| `vmImage`           | string  | 'ubuntu-latest' | Agent VM image                               |
+| `vmImage`           | string  | 'ubuntu-latest' | Microsoft-hosted VM image (ignored if `poolName` is set) |
+| `poolName`          | string  | ''              | Self-hosted agent pool name                  |
+| `demands`           | object  | []              | Agent demands (used with `poolName`)         |
 | `testType`          | string  | 'all'           | Type of tests ('unit', 'integration', 'all') |
 | `coverageThreshold` | number  | 80              | Minimum code coverage percentage             |
 | `parallelTests`     | boolean | true            | Whether to run tests in parallel             |
@@ -225,7 +231,9 @@ Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Categ
 | ------------------- | ------- | --------------- | ------------------------------------- |
 | `nodeVersion`       | string  | '18'            | Node.js version to use                |
 | `projectPath`       | string  | '.'             | Path to Angular project               |
-| `vmImage`           | string  | 'ubuntu-latest' | Agent VM image                        |
+| `vmImage`           | string  | 'ubuntu-latest' | Microsoft-hosted VM image (ignored if `poolName` is set) |
+| `poolName`          | string  | ''              | Self-hosted agent pool name           |
+| `demands`           | object  | []              | Agent demands (used with `poolName`)  |
 | `testType`          | string  | 'all'           | Type of tests ('unit', 'e2e', 'all')  |
 | `coverageThreshold` | number  | 80              | Minimum code coverage percentage      |
 | `headless`          | boolean | true            | Whether to run tests in headless mode |
@@ -239,7 +247,9 @@ Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Categ
 | `buildConfiguration` | string  | 'Release'          | Build configuration ('Debug' or 'Release')       |
 | `projectPath`        | string  | '.'                | Path to .NET project or solution                 |
 | `projects`           | string  | '\*\*/\*.sln'      | Glob for solution or project files               |
-| `vmImage`            | string  | 'ubuntu-latest'    | Agent VM image                                   |
+| `vmImage`            | string  | 'ubuntu-latest'    | Microsoft-hosted VM image (ignored if `poolName` is set) |
+| `poolName`           | string  | ''                 | Self-hosted agent pool name                      |
+| `demands`            | object  | []                 | Agent demands (used with `poolName`)             |
 | `artifactName`       | string  | 'nuget-artifacts'  | Name for published artifacts                     |
 | `cacheDependencies`  | boolean | true               | Whether to cache NuGet packages                  |
 | `packPackages`       | boolean | true               | Whether to pack `.nupkg` files                   |
@@ -253,7 +263,9 @@ Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Categ
 | `dotnetVersion`      | string  | '8.0.x'         | .NET SDK version to use                             |
 | `projectPath`        | string  | '.'             | Path to .NET project or solution                    |
 | `projects`           | string  | '\*\*/\*.sln'   | Glob for solution or project files                  |
-| `vmImage`            | string  | 'ubuntu-latest' | Agent VM image                                      |
+| `vmImage`            | string  | 'ubuntu-latest' | Microsoft-hosted VM image (ignored if `poolName` is set) |
+| `poolName`           | string  | ''              | Self-hosted agent pool name                         |
+| `demands`            | object  | []              | Agent demands (used with `poolName`)                |
 | `testType`           | string  | 'all'           | Type of tests ('unit', 'integration', 'all')        |
 | `coverageThreshold`  | number  | 80              | Minimum code coverage percentage                    |
 | `parallelTests`      | boolean | true            | Whether to run tests in parallel                    |
@@ -266,11 +278,35 @@ Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Categ
 | `dotnetVersion`  | string  | '8.0.x'         | .NET SDK version to use                          |
 | `projectPath`    | string  | '.'             | Path to .NET project or solution                 |
 | `projects`       | string  | '\*\*/\*.sln'   | Glob for solution or project files               |
-| `vmImage`        | string  | 'ubuntu-latest' | Agent VM image                                   |
+| `vmImage`        | string  | 'ubuntu-latest' | Microsoft-hosted VM image (ignored if `poolName` is set) |
+| `poolName`       | string  | ''              | Self-hosted agent pool name                      |
+| `demands`        | object  | []              | Agent demands (used with `poolName`)             |
 | `severity`       | string  | 'warn'          | Minimum severity ('info', 'warn', 'error')       |
 | `continueOnError`| boolean | false           | Whether to continue on lint errors               |
 
 ## Advanced Usage
+
+### Agent pools (Azure DevOps Server / self-hosted)
+
+`vmImage` selects a Microsoft-hosted image and is ignored when `poolName` is set. On Azure DevOps Server, set `poolName` to a self-hosted pool. Pin a specific agent with a demand on `Agent.Name`:
+
+```yaml
+stages:
+  - template: stages/nuget-ci-stage.yml@templates
+    parameters:
+      poolName: "Linux"
+      demands:
+        - Agent.Name -equals BUILD01
+```
+
+Any agent in the pool:
+
+```yaml
+parameters:
+  poolName: "Linux"
+```
+
+The same `poolName` and `demands` parameters exist on the Angular, Java, and NuGet CI stages and jobs.
 
 ### Multi-Project Pipeline
 
@@ -420,6 +456,7 @@ For issues and questions:
 
 ## Version History
 
+- **v2.2.1**: Added `poolName` and `demands` to Angular, Java, and NuGet jobs/stages
 - **v2.2.0**: Added NuGet (.NET) lint, test, build, pack, and publish templates
 - **v2.1.0**: Added Angular support, improved Java templates
 - **v2.0.0**: Major refactoring, added stage templates

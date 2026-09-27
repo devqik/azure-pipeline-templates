@@ -30,6 +30,8 @@ stages:
           buildConfiguration: 'release'
           projectPath: 'backend/pom.xml'
           vmImage: 'ubuntu-latest'
+          poolName: ''
+          demands: []
           javaVersion: '11'
           skipTests: false
           publishTestResults: true
@@ -40,6 +42,8 @@ stages:
           buildTool: 'maven'
           projectPath: 'backend/pom.xml'
           vmImage: 'ubuntu-latest'
+          poolName: ''
+          demands: []
           testType: 'all'
           coverageThreshold: 80
           parallelTests: true
@@ -55,6 +59,8 @@ stages:
           buildConfiguration: 'production'
           projectPath: 'frontend'
           vmImage: 'ubuntu-latest'
+          poolName: ''
+          demands: []
           buildOptimization: true
           sourceMap: false
           cacheDependencies: true
@@ -65,6 +71,8 @@ stages:
           nodeVersion: '18'
           projectPath: 'frontend'
           vmImage: 'ubuntu-latest'
+          poolName: ''
+          demands: []
           testType: 'all'
           coverageThreshold: 80
           headless: true

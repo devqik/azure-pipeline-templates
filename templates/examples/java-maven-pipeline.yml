@@ -27,6 +27,8 @@ stages:
       buildConfiguration: 'release'
       projectPath: 'pom.xml'
       vmImage: 'ubuntu-latest'
+      poolName: ''
+      demands: []
       javaVersion: '11'
       runTests: true
       testType: 'all'

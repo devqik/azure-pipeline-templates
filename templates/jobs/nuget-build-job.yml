@@ -5,7 +5,9 @@
 # - buildConfiguration: Build configuration ('Debug' or 'Release', default: 'Release')
 # - projectPath: Path to .NET project or solution (default: '.')
 # - projects: Glob for solution or project files (default: '**/*.sln')
-# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
+# - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
+# - demands: Agent demands for the self-hosted pool (default: [])
 # - artifactName: Name for published artifacts (default: 'nuget-artifacts')
 # - cacheDependencies: Whether to cache NuGet packages (default: true)
 # - packPackages: Whether to pack NuGet packages (default: true)
@@ -29,6 +31,12 @@ parameters:
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
+- name: poolName
+  type: string
+  default: ''
+- name: demands
+  type: object
+  default: []
 - name: artifactName
   type: string
   default: 'nuget-artifacts'
@@ -48,8 +56,14 @@ parameters:
 jobs:
 - job: NuGetBuild
   displayName: 'NuGet Build'
-  pool:
-    vmImage: ${{ parameters.vmImage }}
+  ${{ if ne(parameters.poolName, '') }}:
+    pool:
+      name: ${{ parameters.poolName }}
+      ${{ if gt(length(parameters.demands), 0) }}:
+        demands: ${{ parameters.demands }}
+  ${{ if eq(parameters.poolName, '') }}:
+    pool:
+      vmImage: ${{ parameters.vmImage }}
 
   variables:
     buildConfiguration: ${{ parameters.buildConfiguration }}

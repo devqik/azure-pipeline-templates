@@ -4,7 +4,9 @@
 # - dotnetVersion: .NET SDK version to use (default: '8.0.x')
 # - projectPath: Path to .NET project or solution (default: '.')
 # - projects: Glob for solution or project files (default: '**/*.sln')
-# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
+# - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
+# - demands: Agent demands for the self-hosted pool (default: [])
 # - severity: Minimum severity to report (default: 'warn')
 # - continueOnError: whether to continue on lint errors (default: false)
 
@@ -21,6 +23,12 @@ parameters:
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
+- name: poolName
+  type: string
+  default: ''
+- name: demands
+  type: object
+  default: []
 - name: severity
   type: string
   default: 'warn'
@@ -32,8 +40,14 @@ parameters:
 jobs:
 - job: NuGetLint
   displayName: 'NuGet Lint'
-  pool:
-    vmImage: ${{ parameters.vmImage }}
+  ${{ if ne(parameters.poolName, '') }}:
+    pool:
+      name: ${{ parameters.poolName }}
+      ${{ if gt(length(parameters.demands), 0) }}:
+        demands: ${{ parameters.demands }}
+  ${{ if eq(parameters.poolName, '') }}:
+    pool:
+      vmImage: ${{ parameters.vmImage }}
 
   variables:
     projectPath: ${{ parameters.projectPath }}

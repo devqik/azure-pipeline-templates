@@ -11,6 +11,7 @@ variables:
   
   # Agent Configuration
   vmImage: 'ubuntu-latest'
+  poolName: ''
   
   # Version Control
   major: '1'

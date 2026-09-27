@@ -3,7 +3,9 @@
 # Parameters:
 # - nodeVersion: Node.js version to use (default: '18')
 # - projectPath: Path to Angular project (default: '.')
-# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
+# - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
+# - demands: Agent demands for the self-hosted pool (default: [])
 # - lintScript: npm script to run for linting (default: 'lint')
 # - continueOnError: whether to continue on lint errors (default: false)
 
@@ -17,6 +19,12 @@ parameters:
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
+- name: poolName
+  type: string
+  default: ''
+- name: demands
+  type: object
+  default: []
 - name: lintScript
   type: string
   default: 'lint'
@@ -27,8 +35,14 @@ parameters:
 jobs:
 - job: AngularLint
   displayName: 'Angular Lint'
-  pool:
-    vmImage: ${{ parameters.vmImage }}
+  ${{ if ne(parameters.poolName, '') }}:
+    pool:
+      name: ${{ parameters.poolName }}
+      ${{ if gt(length(parameters.demands), 0) }}:
+        demands: ${{ parameters.demands }}
+  ${{ if eq(parameters.poolName, '') }}:
+    pool:
+      vmImage: ${{ parameters.vmImage }}
 
   variables:
     projectPath: ${{ parameters.projectPath }}

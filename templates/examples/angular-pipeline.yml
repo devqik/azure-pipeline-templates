@@ -27,6 +27,8 @@ stages:
       buildConfiguration: 'production'
       projectPath: '.'
       vmImage: 'ubuntu-latest'
+      poolName: ''
+      demands: []
       runTests: true
       testType: 'all'
       coverageThreshold: 80

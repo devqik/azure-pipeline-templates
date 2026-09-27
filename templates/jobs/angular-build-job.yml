@@ -4,7 +4,9 @@
 # - nodeVersion: Node.js version to use (default: '18')
 # - buildConfiguration: Build configuration ('development', 'staging', 'production', default: 'production')
 # - projectPath: Path to Angular project (default: '.')
-# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
+# - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
+# - demands: Agent demands for the self-hosted pool (default: [])
 # - artifactName: Name for published artifacts (default: 'angular-artifacts')
 # - buildOptimization: Whether to enable build optimization (default: true)
 # - sourceMap: Whether to generate source maps (default: false for production)
@@ -24,6 +26,12 @@ parameters:
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
+- name: poolName
+  type: string
+  default: ''
+- name: demands
+  type: object
+  default: []
 - name: artifactName
   type: string
   default: 'angular-artifacts'
@@ -40,8 +48,14 @@ parameters:
 jobs:
 - job: AngularBuild
   displayName: 'Angular Build'
-  pool:
-    vmImage: ${{ parameters.vmImage }}
+  ${{ if ne(parameters.poolName, '') }}:
+    pool:
+      name: ${{ parameters.poolName }}
+      ${{ if gt(length(parameters.demands), 0) }}:
+        demands: ${{ parameters.demands }}
+  ${{ if eq(parameters.poolName, '') }}:
+    pool:
+      vmImage: ${{ parameters.vmImage }}
   
   variables:
     buildConfiguration: ${{ parameters.buildConfiguration }}

@@ -7,6 +7,7 @@ variables:
   javaVersion: '11'
   buildTool: 'maven'
   projectPath: '**/pom.xml'
+  poolName: ''
   
   # Maven Configuration
   mavenGoals: 'clean compile test package'

@@ -4,7 +4,9 @@
 # - dotnetVersion: .NET SDK version to use (default: '8.0.x')
 # - projectPath: Path to .NET project or solution (default: '.')
 # - projects: Glob for solution or project files (default: '**/*.sln')
-# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
+# - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
+# - demands: Agent demands for the self-hosted pool (default: [])
 # - testType: Type of tests to run ('unit', 'integration', 'all', default: 'all')
 # - coverageThreshold: Minimum code coverage percentage (default: 80)
 # - parallelTests: Whether to run tests in parallel (default: true)
@@ -23,6 +25,12 @@ parameters:
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
+- name: poolName
+  type: string
+  default: ''
+- name: demands
+  type: object
+  default: []
 - name: testType
   type: string
   default: 'all'
@@ -41,8 +49,14 @@ parameters:
 jobs:
 - job: NuGetTest
   displayName: 'NuGet Tests'
-  pool:
-    vmImage: ${{ parameters.vmImage }}
+  ${{ if ne(parameters.poolName, '') }}:
+    pool:
+      name: ${{ parameters.poolName }}
+      ${{ if gt(length(parameters.demands), 0) }}:
+        demands: ${{ parameters.demands }}
+  ${{ if eq(parameters.poolName, '') }}:
+    pool:
+      vmImage: ${{ parameters.vmImage }}
 
   variables:
     projectPath: ${{ parameters.projectPath }}

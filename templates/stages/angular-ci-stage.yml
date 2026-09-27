@@ -4,7 +4,9 @@
 # - nodeVersion: Node.js version to use (default: '18')
 # - buildConfiguration: Build configuration ('development', 'staging', 'production', default: 'production')
 # - projectPath: Path to Angular project (default: '.')
-# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
+# - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
+# - demands: Agent demands for the self-hosted pool (default: [])
 # - runTests: Whether to run tests (default: true)
 # - testType: Type of tests to run ('unit', 'e2e', 'all', default: 'all')
 # - coverageThreshold: Minimum code coverage percentage (default: 80)
@@ -26,6 +28,12 @@ parameters:
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
+- name: poolName
+  type: string
+  default: ''
+- name: demands
+  type: object
+  default: []
 - name: runTests
   type: boolean
   default: true
@@ -56,6 +64,8 @@ stages:
         nodeVersion: ${{ parameters.nodeVersion }}
         projectPath: ${{ parameters.projectPath }}
         vmImage: ${{ parameters.vmImage }}
+        poolName: ${{ parameters.poolName }}
+        demands: ${{ parameters.demands }}
         lintScript: 'lint'
         continueOnError: ${{ parameters.lintAllowFailure }}
   - template: jobs/angular-build-job.yml@templates
@@ -64,6 +74,8 @@ stages:
       buildConfiguration: ${{ parameters.buildConfiguration }}
       projectPath: ${{ parameters.projectPath }}
       vmImage: ${{ parameters.vmImage }}
+      poolName: ${{ parameters.poolName }}
+      demands: ${{ parameters.demands }}
       buildOptimization: ${{ parameters.buildOptimization }}
       sourceMap: false
       cacheDependencies: true
@@ -75,6 +87,8 @@ stages:
         nodeVersion: ${{ parameters.nodeVersion }}
         projectPath: ${{ parameters.projectPath }}
         vmImage: ${{ parameters.vmImage }}
+        poolName: ${{ parameters.poolName }}
+        demands: ${{ parameters.demands }}
         testType: ${{ parameters.testType }}
         coverageThreshold: ${{ parameters.coverageThreshold }}
         headless: true

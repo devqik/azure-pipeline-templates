@@ -4,7 +4,9 @@
 # - buildTool: Build tool to use ('maven' or 'gradle', default: 'maven')
 # - buildConfiguration: Build configuration ('debug' or 'release', default: 'release')
 # - projectPath: Path to project files (default: '**/pom.xml' for Maven, '**/build.gradle' for Gradle)
-# - vmImage: Agent VM image (default: 'ubuntu-latest')
+# - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
+# - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
+# - demands: Agent demands for the self-hosted pool (default: [])
 # - javaVersion: Java version to use (default: '11')
 # - runTests: Whether to run tests (default: true)
 # - testType: Type of tests to run ('unit', 'integration', 'all', default: 'all')
@@ -25,6 +27,12 @@ parameters:
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
+- name: poolName
+  type: string
+  default: ''
+- name: demands
+  type: object
+  default: []
 - name: javaVersion
   type: string
   default: '11'
@@ -49,6 +57,8 @@ stages:
       buildConfiguration: ${{ parameters.buildConfiguration }}
       projectPath: ${{ parameters.projectPath }}
       vmImage: ${{ parameters.vmImage }}
+      poolName: ${{ parameters.poolName }}
+      demands: ${{ parameters.demands }}
       javaVersion: ${{ parameters.javaVersion }}
       skipTests: ${{ not(parameters.runTests) }}
       publishTestResults: ${{ parameters.runTests }}
@@ -60,6 +70,8 @@ stages:
         buildTool: ${{ parameters.buildTool }}
         projectPath: ${{ parameters.projectPath }}
         vmImage: ${{ parameters.vmImage }}
+        poolName: ${{ parameters.poolName }}
+        demands: ${{ parameters.demands }}
         testType: ${{ parameters.testType }}
         coverageThreshold: ${{ parameters.coverageThreshold }}
         parallelTests: true

@@ -28,6 +28,8 @@ stages:
       projectPath: '.'
       projects: '**/*.sln'
       vmImage: 'ubuntu-latest'
+      poolName: ''
+      demands: []
       runTests: true
       testType: 'all'
       coverageThreshold: 80
@@ -43,6 +45,10 @@ stages:
         displayName: 'Push packages to feed'
         pool:
           vmImage: ubuntu-latest
+          # On Azure DevOps Server / self-hosted agents:
+          # name: Linux
+          # demands:
+          #   - Agent.Name -equals BUILD01
         steps:
           - download: current
             artifact: nuget-build-artifacts
