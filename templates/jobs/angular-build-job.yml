@@ -75,9 +75,9 @@ jobs:
     parameters:
       buildConfiguration: $(buildConfiguration)
       projectPath: $(projectPath)
-      buildOptimization: $(buildOptimization)
-      sourceMap: $(sourceMap)
-      cacheDependencies: $(cacheDependencies)
+      buildOptimization: ${{ parameters.buildOptimization }}
+      sourceMap: ${{ parameters.sourceMap }}
+      cacheDependencies: ${{ parameters.cacheDependencies }}
   
   - template: steps/publish-artifacts.yml@templates
     parameters:

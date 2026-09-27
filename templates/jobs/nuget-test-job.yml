@@ -77,7 +77,7 @@ jobs:
       projectPath: $(projectPath)
       projects: $(projects)
       testType: ${{ parameters.testType }}
-      coverageThreshold: $(coverageThreshold)
+      coverageThreshold: ${{ parameters.coverageThreshold }}
       parallelTests: ${{ parameters.parallelTests }}
       buildConfiguration: $(buildConfiguration)
 

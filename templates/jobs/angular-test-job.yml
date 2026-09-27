@@ -68,10 +68,10 @@ jobs:
   - template: steps/angular-test-steps.yml@templates
     parameters:
       projectPath: $(projectPath)
-      testType: $(testType)
-      coverageThreshold: $(coverageThreshold)
-      headless: $(headless)
-      parallelTests: $(parallelTests)
+      testType: ${{ parameters.testType }}
+      coverageThreshold: ${{ parameters.coverageThreshold }}
+      headless: ${{ parameters.headless }}
+      parallelTests: ${{ parameters.parallelTests }}
   
   - template: steps/publish-test-results.yml@templates
     parameters:

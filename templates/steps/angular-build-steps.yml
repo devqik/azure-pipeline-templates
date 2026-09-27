@@ -36,7 +36,15 @@ steps:
 
 - script: |
     cd $(projectPath)
-    npm run build -- --configuration=$(buildConfiguration) ${{ if parameters.buildOptimization }}--optimization${{ else }}--no-optimization${{ endif }} ${{ if parameters.sourceMap }}--source-map${{ else }}--no-source-map${{ endif }}
+    OPT_FLAG="--no-optimization"
+    MAP_FLAG="--no-source-map"
+    case "$(buildOptimization)" in
+      True|true) OPT_FLAG="--optimization" ;;
+    esac
+    case "$(sourceMap)" in
+      True|true) MAP_FLAG="--source-map" ;;
+    esac
+    npm run build -- --configuration=$(buildConfiguration) $OPT_FLAG $MAP_FLAG
   displayName: 'Build Angular application'
 
 - script: |
