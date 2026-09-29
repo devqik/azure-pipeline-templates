@@ -7,7 +7,6 @@ variables:
   buildConfiguration: 'Release'
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
   
   # Agent Configuration
   vmImage: 'ubuntu-latest'

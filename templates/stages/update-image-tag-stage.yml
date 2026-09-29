@@ -47,7 +47,7 @@ stages:
   displayName: ${{ parameters.displayName }}
   dependsOn: ${{ parameters.dependsOn }}
   jobs:
-  - template: ../jobs/update-image-tag-deployment.yml@templates
+  - template: jobs/update-image-tag-deployment.yml@templates
     parameters:
       displayName: ${{ parameters.displayName }}
       environment: ${{ parameters.environment }}

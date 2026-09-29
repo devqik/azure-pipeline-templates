@@ -5,7 +5,7 @@
 # - projectPath: Path to Angular project
 # - buildOptimization: Whether to enable build optimization
 # - sourceMap: Whether to generate source maps
-# - cacheDependencies: Whether to cache node_modules
+# - cacheDependencies: Whether to cache the npm download cache (requires pipeline caching on the server)
 
 parameters:
 - name: buildConfiguration
@@ -22,34 +22,39 @@ parameters:
 steps:
 - ${{ if parameters.cacheDependencies }}:
   - task: Cache@2
-    displayName: 'Cache node_modules'
+    displayName: 'Cache npm packages'
     inputs:
-      key: 'npm | "$(Agent.OS)" | package-lock.json'
+      key: 'npm | "$(Agent.OS)" | ${{ parameters.projectPath }}/package-lock.json'
       restoreKeys: |
         npm | "$(Agent.OS)"
-      path: '$(projectPath)/node_modules'
+      path: '$(Pipeline.Workspace)/.npm'
+  - script: echo "##vso[task.setvariable variable=npm_config_cache]$(Pipeline.Workspace)/.npm"
+    displayName: 'Use cached npm directory'
 
 - script: |
-    cd $(projectPath)
+    cd "${{ parameters.projectPath }}"
     npm ci
   displayName: 'Install dependencies'
 
 - script: |
-    cd $(projectPath)
+    cd "${{ parameters.projectPath }}"
     OPT_FLAG="--no-optimization"
     MAP_FLAG="--no-source-map"
-    case "$(buildOptimization)" in
+    case "${{ parameters.buildOptimization }}" in
       True|true) OPT_FLAG="--optimization" ;;
     esac
-    case "$(sourceMap)" in
+    case "${{ parameters.sourceMap }}" in
       True|true) MAP_FLAG="--source-map" ;;
     esac
-    npm run build -- --configuration=$(buildConfiguration) $OPT_FLAG $MAP_FLAG
+    npm run build -- --configuration=${{ parameters.buildConfiguration }} $OPT_FLAG $MAP_FLAG
   displayName: 'Build Angular application'
 
 - script: |
-    cd $(projectPath)
-    echo "Build completed successfully"
-    echo "Build artifacts location: dist/"
+    cd "${{ parameters.projectPath }}"
+    if [ ! -d dist ]; then
+      echo "##vso[task.logissue type=error]No dist/ folder found in ${{ parameters.projectPath }}"
+      exit 1
+    fi
+    echo "Build artifacts location: ${{ parameters.projectPath }}/dist"
     ls -la dist/
   displayName: 'Verify build artifacts'

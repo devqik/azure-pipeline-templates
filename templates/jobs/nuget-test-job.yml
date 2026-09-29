@@ -58,30 +58,22 @@ jobs:
     pool:
       vmImage: ${{ parameters.vmImage }}
 
-  variables:
-    projectPath: ${{ parameters.projectPath }}
-    projects: ${{ parameters.projects }}
-    dotnetVersion: ${{ parameters.dotnetVersion }}
-    testType: ${{ parameters.testType }}
-    coverageThreshold: ${{ parameters.coverageThreshold }}
-    parallelTests: ${{ parameters.parallelTests }}
-    buildConfiguration: ${{ parameters.buildConfiguration }}
-
   steps:
   - template: steps/setup-dotnet.yml@templates
     parameters:
-      dotnetVersion: $(dotnetVersion)
+      dotnetVersion: ${{ parameters.dotnetVersion }}
 
   - template: steps/nuget-test-steps.yml@templates
     parameters:
-      projectPath: $(projectPath)
-      projects: $(projects)
+      projectPath: ${{ parameters.projectPath }}
+      projects: ${{ parameters.projects }}
       testType: ${{ parameters.testType }}
       coverageThreshold: ${{ parameters.coverageThreshold }}
       parallelTests: ${{ parameters.parallelTests }}
-      buildConfiguration: $(buildConfiguration)
+      buildConfiguration: ${{ parameters.buildConfiguration }}
 
   - template: steps/publish-test-results.yml@templates
     parameters:
       testResultsFormat: 'VSTest'
-      testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
+      testResultsFiles: '**/*.trx'
+      searchFolder: '$(Agent.TempDirectory)/TestResults'

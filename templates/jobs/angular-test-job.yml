@@ -52,22 +52,15 @@ jobs:
   ${{ if eq(parameters.poolName, '') }}:
     pool:
       vmImage: ${{ parameters.vmImage }}
-  
-  variables:
-    projectPath: ${{ parameters.projectPath }}
-    testType: ${{ parameters.testType }}
-    coverageThreshold: ${{ parameters.coverageThreshold }}
-    headless: ${{ parameters.headless }}
-    parallelTests: ${{ parameters.parallelTests }}
-  
+
   steps:
   - template: steps/setup-nodejs.yml@templates
     parameters:
-      nodeVersion: $(nodeVersion)
+      nodeVersion: ${{ parameters.nodeVersion }}
   
   - template: steps/angular-test-steps.yml@templates
     parameters:
-      projectPath: $(projectPath)
+      projectPath: ${{ parameters.projectPath }}
       testType: ${{ parameters.testType }}
       coverageThreshold: ${{ parameters.coverageThreshold }}
       headless: ${{ parameters.headless }}
@@ -77,3 +70,4 @@ jobs:
     parameters:
       testResultsFormat: 'JUnit'
       testResultsFiles: '**/test-results/*.xml'
+      searchFolder: '$(System.DefaultWorkingDirectory)/${{ parameters.projectPath }}'

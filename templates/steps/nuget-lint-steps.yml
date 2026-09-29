@@ -2,7 +2,7 @@
 # Description: .NET lint steps using dotnet format (code style / analyzers)
 # Parameters:
 # - projectPath: Path to .NET project or solution
-# - projects: Glob for solution or project files
+# - projects: Glob for solution or project files, relative to projectPath (e.g. '**/*.sln')
 # - continueOnError: whether to continue on lint errors (default: false)
 # - severity: Minimum severity to report ('info', 'warn', 'error')
 
@@ -24,19 +24,41 @@ steps:
   displayName: 'Restore dependencies'
   inputs:
     command: 'restore'
-    projects: '$(projects)'
-    workingDirectory: '$(projectPath)'
+    projects: '${{ parameters.projects }}'
+    workingDirectory: '${{ parameters.projectPath }}'
 
-- script: |
-    cd $(projectPath)
-    dotnet format --verify-no-changes --severity $(severity) --verbosity diagnostic
+- bash: |
+    set -u
+    shopt -s globstar nullglob
+    cd "${{ parameters.projectPath }}"
+    targets=( ${{ parameters.projects }} )
+    if [ ${#targets[@]} -eq 0 ]; then
+      echo "##vso[task.logissue type=error]No files match '${{ parameters.projects }}' under '${{ parameters.projectPath }}'"
+      exit 1
+    fi
+    mkdir -p reports
+    status=0
+    for target in "${targets[@]}"; do
+      echo "Checking formatting: $target"
+      report="reports/$(basename "$target")"
+      mkdir -p "$report"
+      dotnet format "$target" --verify-no-changes --no-restore --severity ${{ parameters.severity }} --report "$report" || status=1
+    done
+    exit $status
   displayName: 'Run dotnet format'
   continueOnError: ${{ parameters.continueOnError }}
 
+- bash: |
+    if [ -n "$(ls -A "${{ parameters.projectPath }}/reports" 2>/dev/null)" ]; then
+      echo "##vso[task.setvariable variable=hasLintReports]true"
+    fi
+  displayName: 'Check for lint reports'
+  condition: succeededOrFailed()
+
 - task: PublishBuildArtifacts@1
-  displayName: 'Publish lint reports (if any)'
-  condition: exists('$(projectPath)/reports')
+  displayName: 'Publish lint reports'
+  condition: and(succeededOrFailed(), eq(variables['hasLintReports'], 'true'))
   inputs:
-    PathtoPublish: '$(projectPath)/reports'
+    PathtoPublish: '${{ parameters.projectPath }}/reports'
     ArtifactName: 'lint-reports'
     publishLocation: 'Container'

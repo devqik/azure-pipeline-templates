@@ -1,9 +1,10 @@
 # Template: java-build-steps.yml
 # Description: Java build steps for Maven and Gradle projects
+# Uses the JDK selected by setup-java.yml (JAVA_HOME).
 # Parameters:
 # - buildTool: Build tool to use ('maven' or 'gradle')
 # - buildConfiguration: Build configuration ('debug' or 'release')
-# - projectPath: Path to project files
+# - projectPath: Path to pom.xml (Maven) or build.gradle / build.gradle.kts (Gradle)
 # - skipTests: Whether to skip tests
 # - publishTestResults: Whether to publish test results
 
@@ -21,53 +22,30 @@ parameters:
 
 steps:
 - ${{ if eq(parameters.buildTool, 'maven') }}:
-  - task: Maven@4
-    displayName: 'Maven Build'
-    inputs:
-      mavenPomFile: '$(projectPath)'
-      goals: 'clean compile'
-      options: '-Dmaven.test.skip=$(skipTests)'
-      publishJUnitResults: $(publishTestResults)
-      testResultsFiles: '**/surefire-reports/*.xml'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.11'
-      mavenVersionOption: 'Default'
-
-- ${{ if eq(parameters.buildTool, 'maven') }}:
-  - task: Maven@4
+  - task: Maven@3
     displayName: 'Maven Package'
     inputs:
-      mavenPomFile: '$(projectPath)'
-      goals: 'package'
-      options: '-Dmaven.test.skip=$(skipTests) -DskipTests=$(skipTests)'
-      publishJUnitResults: $(publishTestResults)
-      testResultsFiles: '**/surefire-reports/*.xml'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.11'
+      mavenPomFile: '${{ parameters.projectPath }}'
+      goals: 'clean package'
+      ${{ if parameters.skipTests }}:
+        options: '-DskipTests'
+      publishJUnitResults: ${{ parameters.publishTestResults }}
+      testResultsFiles: '**/surefire-reports/TEST-*.xml'
+      javaHomeOption: 'Path'
+      jdkDirectory: '$(JAVA_HOME)'
       mavenVersionOption: 'Default'
 
 - ${{ if eq(parameters.buildTool, 'gradle') }}:
   - task: Gradle@2
     displayName: 'Gradle Build'
     inputs:
-      workingDirectory: '$(projectPath)'
-      gradleWrapperFile: 'gradlew'
+      workingDirectory: ${{ replace(replace(parameters.projectPath, 'build.gradle.kts', ''), 'build.gradle', '') }}
+      gradleWrapperFile: ${{ format('{0}gradlew', replace(replace(parameters.projectPath, 'build.gradle.kts', ''), 'build.gradle', '')) }}
       gradleOptions: '-Xmx3072m'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.11'
+      javaHomeOption: 'Path'
+      jdkDirectory: '$(JAVA_HOME)'
       tasks: 'build'
-      publishJUnitResults: $(publishTestResults)
-      testResultsFiles: '**/build/test-results/test/*.xml'
-      options: ${{ if parameters.skipTests }}'-x test'${{ else }}''${{ endif }}
-
-- ${{ if eq(parameters.buildTool, 'gradle') }}:
-  - task: Gradle@2
-    displayName: 'Gradle Assemble'
-    inputs:
-      workingDirectory: '$(projectPath)'
-      gradleWrapperFile: 'gradlew'
-      gradleOptions: '-Xmx3072m'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.11'
-      tasks: 'assemble'
-      options: ${{ if parameters.skipTests }}'-x test'${{ else }}''${{ endif }}
+      ${{ if parameters.skipTests }}:
+        options: '-x test'
+      publishJUnitResults: ${{ parameters.publishTestResults }}
+      testResultsFiles: '**/build/test-results/test/TEST-*.xml'

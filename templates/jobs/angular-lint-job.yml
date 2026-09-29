@@ -44,21 +44,14 @@ jobs:
     pool:
       vmImage: ${{ parameters.vmImage }}
 
-  variables:
-    projectPath: ${{ parameters.projectPath }}
-    nodeVersion: ${{ parameters.nodeVersion }}
-    lintScript: ${{ parameters.lintScript }}
-    continueOnError: ${{ parameters.continueOnError }}
-
   steps:
   - template: steps/setup-nodejs.yml@templates
     parameters:
-      nodeVersion: $(nodeVersion)
+      nodeVersion: ${{ parameters.nodeVersion }}
 
   - template: steps/angular-lint-steps.yml@templates
     parameters:
-      projectPath: $(projectPath)
-      lintScript: $(lintScript)
-      continueOnError: ${{ variables.continueOnError }}
-
+      projectPath: ${{ parameters.projectPath }}
+      lintScript: ${{ parameters.lintScript }}
+      continueOnError: ${{ parameters.continueOnError }}
 

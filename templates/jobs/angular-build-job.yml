@@ -56,30 +56,21 @@ jobs:
   ${{ if eq(parameters.poolName, '') }}:
     pool:
       vmImage: ${{ parameters.vmImage }}
-  
-  variables:
-    buildConfiguration: ${{ parameters.buildConfiguration }}
-    projectPath: ${{ parameters.projectPath }}
-    artifactName: ${{ parameters.artifactName }}
-    nodeVersion: ${{ parameters.nodeVersion }}
-    buildOptimization: ${{ parameters.buildOptimization }}
-    sourceMap: ${{ parameters.sourceMap }}
-    cacheDependencies: ${{ parameters.cacheDependencies }}
-  
+
   steps:
   - template: steps/setup-nodejs.yml@templates
     parameters:
-      nodeVersion: $(nodeVersion)
+      nodeVersion: ${{ parameters.nodeVersion }}
   
   - template: steps/angular-build-steps.yml@templates
     parameters:
-      buildConfiguration: $(buildConfiguration)
-      projectPath: $(projectPath)
+      buildConfiguration: ${{ parameters.buildConfiguration }}
+      projectPath: ${{ parameters.projectPath }}
       buildOptimization: ${{ parameters.buildOptimization }}
       sourceMap: ${{ parameters.sourceMap }}
       cacheDependencies: ${{ parameters.cacheDependencies }}
   
   - template: steps/publish-artifacts.yml@templates
     parameters:
-      artifactName: $(artifactName)
-      publishPath: 'dist/**/*'
+      artifactName: ${{ parameters.artifactName }}
+      publishPath: '$(System.DefaultWorkingDirectory)/${{ parameters.projectPath }}/dist'

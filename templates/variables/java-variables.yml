@@ -6,7 +6,7 @@ variables:
   # Java Configuration
   javaVersion: '11'
   buildTool: 'maven'
-  projectPath: '**/pom.xml'
+  projectPath: 'pom.xml'
   poolName: ''
   
   # Maven Configuration
@@ -27,6 +27,7 @@ variables:
   # Build Artifacts
   artifactName: 'java-artifacts'
   jarPattern: '**/target/*.jar'
+  # Maven@3 is used (Maven@4 is not available on Azure DevOps Server 2020)
   
   # Code Quality
   sonarQubeEnabled: true

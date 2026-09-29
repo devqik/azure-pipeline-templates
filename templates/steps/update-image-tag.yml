@@ -5,9 +5,9 @@
 # - organizationName: Org/collection name (default: 'DefaultCollection')
 # - projectName: Azure DevOps project name (default: 'YourProject')
 # - repoName: Repository name (default: 'YourRepository')
-# - helmRepoName: Local folder name for the Helm repo after clone (default: 'YourProject')
-# - valuesFilePath: Full path to values.yaml to edit
-# - helmBranchName: Branch name to push changes to
+# - helmRepoName: Local folder to clone the Helm repo into (default: 'YourProject')
+# - valuesFilePath: Path to values.yaml, relative to the Helm repo root, relative to the agent working directory, or absolute
+# - helmBranchName: Branch to check out and push changes to (default: 'master')
 # - tag: New image tag value
 
 parameters:
@@ -35,13 +35,34 @@ parameters:
   type: string
 
 steps:
-- script: |
-    git clone "${{ parameters.devopsSshBase }}${{ parameters.organizationName }}/${{ parameters.projectName }}/_git/${{ parameters.repoName }}"
-    sed -i 's/^  tag:.*/  tag: "${{ parameters.tag }}"/' ${{ parameters.valuesFilePath }}
-    cd ${{ parameters.helmRepoName }}
-    pwd
-    ls -la
-    git add .
+- bash: |
+    set -euo pipefail
+    rm -rf "${{ parameters.helmRepoName }}"
+    git clone --branch "${{ parameters.helmBranchName }}" \
+      "${{ parameters.devopsSshBase }}${{ parameters.organizationName }}/${{ parameters.projectName }}/_git/${{ parameters.repoName }}" \
+      "${{ parameters.helmRepoName }}"
+
+    VALUES_FILE="${{ parameters.valuesFilePath }}"
+    if [ -f "${{ parameters.helmRepoName }}/$VALUES_FILE" ]; then
+      VALUES_FILE="$(pwd)/${{ parameters.helmRepoName }}/$VALUES_FILE"
+    elif [ -f "$VALUES_FILE" ]; then
+      VALUES_FILE="$(cd "$(dirname "$VALUES_FILE")" && pwd)/$(basename "$VALUES_FILE")"
+    else
+      echo "##vso[task.logissue type=error]values file not found: ${{ parameters.valuesFilePath }}"
+      exit 1
+    fi
+    cd "${{ parameters.helmRepoName }}"
+
+    sed -i 's|^  tag:.*|  tag: "${{ parameters.tag }}"|' "$VALUES_FILE"
+
+    git config user.email >/dev/null || git config user.email "azure-pipelines@$(hostname)"
+    git config user.name >/dev/null || git config user.name "Azure Pipelines"
+
+    git add "$VALUES_FILE"
+    if git diff --cached --quiet; then
+      echo "Image tag is already ${{ parameters.tag }}; nothing to commit."
+      exit 0
+    fi
     git commit -m "Update image tag to ${{ parameters.tag }}"
-    git push origin HEAD:${{ parameters.helmBranchName }}
+    git push origin "HEAD:${{ parameters.helmBranchName }}"
   displayName: 'Update image tag in values.yaml'

@@ -1,21 +1,28 @@
 # Template: publish-test-results.yml
 # Description: Publish test results
 # Parameters:
-# - testResultsFormat: Format of test results ('JUnit', 'NUnit', 'VSTest', etc.)
+# - testResultsFormat: Format of test results ('JUnit', 'NUnit', 'VSTest', 'XUnit', 'CTest')
 # - testResultsFiles: Path pattern to test result files
+# - searchFolder: Folder to search for test result files (default: '$(System.DefaultWorkingDirectory)')
 
 parameters:
 - name: testResultsFormat
   type: string
+  values: ['JUnit', 'NUnit', 'VSTest', 'XUnit', 'CTest']
 - name: testResultsFiles
   type: string
+- name: searchFolder
+  type: string
+  default: '$(System.DefaultWorkingDirectory)'
 
 steps:
 - task: PublishTestResults@2
   displayName: 'Publish Test Results'
+  condition: succeededOrFailed()
   inputs:
-    testResultsFormat: $(testResultsFormat)
-    testResultsFiles: $(testResultsFiles)
+    testResultsFormat: '${{ parameters.testResultsFormat }}'
+    testResultsFiles: '${{ parameters.testResultsFiles }}'
+    searchFolder: '${{ parameters.searchFolder }}'
     mergeTestResults: true
     testRunTitle: 'Test Results'
     failTaskOnFailedTests: false

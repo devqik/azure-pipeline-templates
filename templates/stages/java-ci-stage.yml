@@ -3,7 +3,7 @@
 # Parameters:
 # - buildTool: Build tool to use ('maven' or 'gradle', default: 'maven')
 # - buildConfiguration: Build configuration ('debug' or 'release', default: 'release')
-# - projectPath: Path to project files (default: '**/pom.xml' for Maven, '**/build.gradle' for Gradle)
+# - projectPath: Path to pom.xml (Maven) or build.gradle / build.gradle.kts (Gradle) (default: 'pom.xml')
 # - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
 # - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
 # - demands: Agent demands for the self-hosted pool (default: [])
@@ -23,7 +23,7 @@ parameters:
   values: ['debug', 'release']
 - name: projectPath
   type: string
-  default: '**/pom.xml'
+  default: 'pom.xml'
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
@@ -72,6 +72,7 @@ stages:
         vmImage: ${{ parameters.vmImage }}
         poolName: ${{ parameters.poolName }}
         demands: ${{ parameters.demands }}
+        javaVersion: ${{ parameters.javaVersion }}
         testType: ${{ parameters.testType }}
         coverageThreshold: ${{ parameters.coverageThreshold }}
         parallelTests: true

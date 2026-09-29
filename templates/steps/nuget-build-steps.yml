@@ -4,9 +4,10 @@
 # - buildConfiguration: Build configuration ('Debug' or 'Release')
 # - projectPath: Path to .NET project or solution
 # - projects: Glob for solution or project files
-# - cacheDependencies: Whether to cache NuGet packages
+# - cacheDependencies: Whether to cache NuGet packages (requires pipeline caching on the server)
 # - packPackages: Whether to pack NuGet packages (.nupkg)
-# - packageVersion: Version to apply when packing
+# - packagesToPack: Projects to pack; ';'-separated globs, '!' excludes (default excludes *Test* projects)
+# - packageVersion: Version to apply when packing (default: '' uses the version in the project file)
 # - includeSymbols: Whether to include symbol packages
 
 parameters:
@@ -22,6 +23,9 @@ parameters:
 - name: packPackages
   type: boolean
   default: true
+- name: packagesToPack
+  type: string
+  default: '**/*.csproj;!**/*Test*.csproj'
 - name: packageVersion
   type: string
   default: ''
@@ -34,7 +38,7 @@ steps:
   - task: Cache@2
     displayName: 'Cache NuGet packages'
     inputs:
-      key: 'nuget | "$(Agent.OS)" | **/packages.lock.json, **/*.csproj, **/*.sln'
+      key: 'nuget | "$(Agent.OS)" | **/*.csproj'
       restoreKeys: |
         nuget | "$(Agent.OS)"
       path: '$(Pipeline.Workspace)/.nuget/packages'
@@ -45,35 +49,43 @@ steps:
   displayName: 'Restore NuGet packages'
   inputs:
     command: 'restore'
-    projects: '$(projects)'
-    workingDirectory: '$(projectPath)'
+    projects: '${{ parameters.projects }}'
+    workingDirectory: '${{ parameters.projectPath }}'
 
 - task: DotNetCoreCLI@2
   displayName: 'Build .NET project'
   inputs:
     command: 'build'
-    projects: '$(projects)'
-    workingDirectory: '$(projectPath)'
-    arguments: '--configuration $(buildConfiguration) --no-restore'
+    projects: '${{ parameters.projects }}'
+    workingDirectory: '${{ parameters.projectPath }}'
+    arguments: '--configuration ${{ parameters.buildConfiguration }} --no-restore'
 
 - ${{ if parameters.packPackages }}:
   - task: DotNetCoreCLI@2
     displayName: 'Pack NuGet packages'
+    ${{ if ne(parameters.packageVersion, '') }}:
+      env:
+        PACKAGE_VERSION: '${{ parameters.packageVersion }}'
     inputs:
       command: 'pack'
-      packagesToPack: '**/*.csproj'
-      workingDirectory: '$(projectPath)'
-      configurationToPack: '$(buildConfiguration)'
+      packagesToPack: '${{ parameters.packagesToPack }}'
+      configurationToPack: '${{ parameters.buildConfiguration }}'
       nobuild: true
       outputDir: '$(Build.ArtifactStagingDirectory)'
-      includeSymbols: ${{ parameters.includeSymbols }}
-      includeSource: ${{ parameters.includeSymbols }}
-      versioningScheme: ${{ if eq(parameters.packageVersion, '') }}'off'${{ else }}'byEnvVar'${{ endif }}
+      includesymbols: ${{ parameters.includeSymbols }}
+      includesource: ${{ parameters.includeSymbols }}
+      ${{ if eq(parameters.packageVersion, '') }}:
+        versioningScheme: 'off'
       ${{ if ne(parameters.packageVersion, '') }}:
-        versionEnvVar: 'packageVersion'
+        versioningScheme: 'byEnvVar'
+        versionEnvVar: 'PACKAGE_VERSION'
 
-- script: |
-    echo "Build completed successfully"
-    echo "NuGet package artifacts:"
-    ls -la "$(Build.ArtifactStagingDirectory)" || true
-  displayName: 'Verify build artifacts'
+  - bash: |
+      shopt -s nullglob
+      pkgs=( "$(Build.ArtifactStagingDirectory)"/*.nupkg )
+      if [ ${#pkgs[@]} -eq 0 ]; then
+        echo "##vso[task.logissue type=error]No .nupkg files were produced. Check packagesToPack and <IsPackable> in your projects."
+        exit 1
+      fi
+      printf 'Packed: %s\n' "${pkgs[@]}"
+    displayName: 'Verify packages'

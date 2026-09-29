@@ -188,7 +188,7 @@ Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Categ
 | -------------------- | ------- | ---------------- | ------------------------------------------ |
 | `buildTool`          | string  | 'maven'          | Build tool ('maven' or 'gradle')           |
 | `buildConfiguration` | string  | 'release'        | Build configuration ('debug' or 'release') |
-| `projectPath`        | string  | '\*\*/pom.xml'   | Path to project files                      |
+| `projectPath`        | string  | 'pom.xml'        | Path to `pom.xml` or `build.gradle(.kts)`  |
 | `vmImage`            | string  | 'ubuntu-latest'  | Microsoft-hosted VM image (ignored if `poolName` is set) |
 | `poolName`           | string  | ''               | Self-hosted agent pool name                |
 | `demands`            | object  | []               | Agent demands (used with `poolName`)       |
@@ -217,7 +217,8 @@ Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Categ
 | Parameter           | Type    | Default         | Description                                  |
 | ------------------- | ------- | --------------- | -------------------------------------------- |
 | `buildTool`         | string  | 'maven'         | Build tool ('maven' or 'gradle')             |
-| `projectPath`       | string  | '\*\*/pom.xml'  | Path to project files                        |
+| `projectPath`       | string  | 'pom.xml'       | Path to `pom.xml` or `build.gradle(.kts)`    |
+| `javaVersion`       | string  | '11'            | Java version to use                          |
 | `vmImage`           | string  | 'ubuntu-latest' | Microsoft-hosted VM image (ignored if `poolName` is set) |
 | `poolName`          | string  | ''              | Self-hosted agent pool name                  |
 | `demands`           | object  | []              | Agent demands (used with `poolName`)         |
@@ -255,6 +256,7 @@ Tag integration tests with `[Trait("Category", "Integration")]` (xUnit), `[Categ
 | `packPackages`       | boolean | true               | Whether to pack `.nupkg` files                   |
 | `packageVersion`     | string  | ''                 | Version to apply when packing (project version if empty) |
 | `includeSymbols`     | boolean | false              | Whether to include symbol packages               |
+| `packagesToPack`     | string  | '\*\*/\*.csproj;!\*\*/\*Test\*.csproj' | Projects to pack (`!` excludes) |
 
 ### NuGet Test Job Parameters
 
@@ -398,6 +400,24 @@ resources:
 
 ## Troubleshooting
 
+### Azure DevOps Server 2020
+
+These templates are written to parse on Azure DevOps Server 2020. When editing them:
+
+- Do not use `${{ else }}`, `${{ elseif }}`, or inline `${{ if }}...${{ endif }}` inside a value. Use separate `${{ if }}` / `${{ if not(...) }}` keys instead.
+- Pass `${{ parameters.x }}` (not `$(x)`) into `boolean`, `number`, or compared template parameters. Parameter types are checked before runtime variables exist.
+- Pipeline conditions have no `exists()` function. Check files in a script and set a variable.
+- Use tasks that ship with Server 2020 (for example `Maven@3`, not `Maven@4`).
+
+Agent requirements:
+
+- `cacheDependencies: true` uses `Cache@2`. Set it to `false` if pipeline caching is not available on your server.
+- `NodeTool` and `UseDotNet` download from the internet. On offline agents, pass `nodeVersion: ''` / `dotnetVersion: ''` to use what is installed on the agent.
+- Coverage checks use `bash`, `grep`, and `awk`.
+- Angular unit tests need Chrome/Chromium, Karma's `cobertura` coverage reporter, and a JUnit reporter writing `test-results/*.xml`.
+- Java unit tests are `*Test`, integration tests `*IT` (Maven failsafe) or a Gradle `integrationTest` task; JaCoCo XML reports are required for coverage.
+- NuGet test projects need `coverlet.collector` for coverage.
+
 ### Common Issues
 
 1. **Template Not Found**
@@ -456,6 +476,7 @@ For issues and questions:
 
 ## Version History
 
+- **v2.2.2**: Azure DevOps Server 2020 compatibility and bug fixes across all templates
 - **v2.2.1**: Added `poolName` and `demands` to Angular, Java, and NuGet jobs/stages
 - **v2.2.0**: Added NuGet (.NET) lint, test, build, pack, and publish templates
 - **v2.1.0**: Added Angular support, improved Java templates

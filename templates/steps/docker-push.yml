@@ -1,10 +1,13 @@
 # Template: docker-push.yml
 # Description: Pushes a Docker image to a registry
 # Parameters:
+# - containerServiceConnection: Docker registry service connection to push to
 # - imageRepository: Docker repository name
 # - tag: Image tag to push
 
 parameters:
+- name: containerServiceConnection
+  type: string
 - name: imageRepository
   type: string
 - name: tag
@@ -14,7 +17,8 @@ steps:
 - task: Docker@2
   displayName: 'Push Docker Image'
   inputs:
-    repository: ${{ parameters.imageRepository }}
+    containerRegistry: '${{ parameters.containerServiceConnection }}'
+    repository: '${{ parameters.imageRepository }}'
     command: push
     tags: |
       ${{ parameters.tag }}

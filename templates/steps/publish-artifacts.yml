@@ -2,7 +2,7 @@
 # Description: Publish build artifacts
 # Parameters:
 # - artifactName: Name for the published artifacts
-# - publishPath: Path to artifacts to publish
+# - publishPath: File or folder to publish (wildcards are not supported by PublishBuildArtifacts)
 
 parameters:
 - name: artifactName
@@ -12,10 +12,8 @@ parameters:
 
 steps:
 - task: PublishBuildArtifacts@1
-  displayName: 'Publish $(artifactName)'
+  displayName: 'Publish ${{ parameters.artifactName }}'
   inputs:
-    pathToPublish: $(publishPath)
-    artifactName: $(artifactName)
+    pathToPublish: '${{ parameters.publishPath }}'
+    artifactName: '${{ parameters.artifactName }}'
     artifactType: 'Container'
-    parallel: true
-    parallelCount: 8

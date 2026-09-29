@@ -3,7 +3,7 @@
 # Parameters:
 # - buildTool: Build tool to use ('maven' or 'gradle', default: 'maven')
 # - buildConfiguration: Build configuration ('debug' or 'release', default: 'release')
-# - projectPath: Path to project files (default: '**/pom.xml' for Maven, '**/build.gradle' for Gradle)
+# - projectPath: Path to pom.xml (Maven) or build.gradle / build.gradle.kts (Gradle) (default: 'pom.xml')
 # - vmImage: Microsoft-hosted VM image (default: 'ubuntu-latest'). Ignored when poolName is set
 # - poolName: Self-hosted agent pool name (default: ''). When set, takes precedence over vmImage
 # - demands: Agent demands for the self-hosted pool (default: [])
@@ -23,7 +23,7 @@ parameters:
   values: ['debug', 'release']
 - name: projectPath
   type: string
-  default: '**/pom.xml'
+  default: 'pom.xml'
 - name: vmImage
   type: string
   default: 'ubuntu-latest'
@@ -57,29 +57,32 @@ jobs:
   ${{ if eq(parameters.poolName, '') }}:
     pool:
       vmImage: ${{ parameters.vmImage }}
-  
-  variables:
-    buildConfiguration: ${{ parameters.buildConfiguration }}
-    projectPath: ${{ parameters.projectPath }}
-    artifactName: ${{ parameters.artifactName }}
-    javaVersion: ${{ parameters.javaVersion }}
-    skipTests: ${{ parameters.skipTests }}
-    publishTestResults: ${{ parameters.publishTestResults }}
-  
+
   steps:
   - template: steps/setup-java.yml@templates
     parameters:
-      javaVersion: $(javaVersion)
-  
+      javaVersion: ${{ parameters.javaVersion }}
+
   - template: steps/java-build-steps.yml@templates
     parameters:
       buildTool: ${{ parameters.buildTool }}
-      buildConfiguration: $(buildConfiguration)
-      projectPath: $(projectPath)
+      buildConfiguration: ${{ parameters.buildConfiguration }}
+      projectPath: ${{ parameters.projectPath }}
       skipTests: ${{ parameters.skipTests }}
       publishTestResults: ${{ parameters.publishTestResults }}
-  
+
+  - task: CopyFiles@2
+    displayName: 'Stage build output'
+    inputs:
+      SourceFolder: '$(System.DefaultWorkingDirectory)'
+      ${{ if eq(parameters.buildTool, 'maven') }}:
+        Contents: '**/target/*.jar'
+      ${{ if eq(parameters.buildTool, 'gradle') }}:
+        Contents: '**/build/libs/*.jar'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+      flattenFolders: true
+
   - template: steps/publish-artifacts.yml@templates
     parameters:
-      artifactName: $(artifactName)
-      publishPath: ${{ if eq(parameters.buildTool, 'maven') }}'target/*.jar'${{ else }}'build/libs/*.jar'${{ endif }}
+      artifactName: ${{ parameters.artifactName }}
+      publishPath: '$(Build.ArtifactStagingDirectory)'

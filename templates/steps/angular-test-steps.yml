@@ -1,9 +1,14 @@
 # Template: angular-test-steps.yml
 # Description: Angular test steps for running unit and e2e tests
+# Project requirements:
+# - Chrome/Chromium on the agent for ChromeHeadless (set CHROME_BIN if not on PATH)
+# - Karma configured with a 'cobertura' coverage reporter (coverage/**/cobertura-coverage.xml)
+# - A JUnit reporter writing to test-results/*.xml (e.g. karma-junit-reporter) for published results
+# - An 'e2e' npm script for e2e tests
 # Parameters:
 # - projectPath: Path to Angular project
 # - testType: Type of tests to run ('unit', 'e2e', 'all')
-# - coverageThreshold: Minimum code coverage percentage
+# - coverageThreshold: Minimum line coverage percentage
 # - headless: Whether to run tests in headless mode
 # - parallelTests: Whether to run tests in parallel
 
@@ -20,30 +25,41 @@ parameters:
   type: boolean
 
 steps:
+- script: |
+    cd "${{ parameters.projectPath }}"
+    npm ci
+  displayName: 'Install dependencies'
+
 - ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
   - script: |
-      cd $(projectPath)
+      cd "${{ parameters.projectPath }}"
       npm run test -- --watch=false --code-coverage --browsers=ChromeHeadless
     displayName: 'Run unit tests with coverage'
 
-- ${{ if or(eq(parameters.testType, 'e2e'), eq(parameters.testType, 'all')) }}:
-  - script: |
-      cd $(projectPath)
-      npm run e2e -- --headless=$(headless)
-    displayName: 'Run e2e tests'
-
-- ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'
+    condition: succeededOrFailed()
     inputs:
       codeCoverageTool: 'Cobertura'
-      summaryFileLocation: '$(projectPath)/coverage/cobertura-coverage.xml'
-      reportDirectory: '$(projectPath)/coverage'
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/${{ parameters.projectPath }}/coverage/**/cobertura-coverage.xml'
 
-- ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
-  - script: |
-      cd $(projectPath)
-      echo "Checking code coverage threshold..."
-      npm run test:coverage-check -- --threshold=$(coverageThreshold)
+  - bash: |
+      THRESHOLD=${{ parameters.coverageThreshold }}
+      FILE=$(find "${{ parameters.projectPath }}/coverage" -name 'cobertura-coverage.xml' 2>/dev/null | head -n 1)
+      if [ -z "$FILE" ]; then
+        echo "##vso[task.logissue type=error]No cobertura-coverage.xml found under ${{ parameters.projectPath }}/coverage. Add the 'cobertura' reporter to karma.conf.js."
+        exit 1
+      fi
+      RATE=$(grep -o 'line-rate="[0-9.]*"' "$FILE" | head -n 1 | grep -o '[0-9.]*')
+      awk -v r="$RATE" -v t="$THRESHOLD" 'BEGIN {
+        pct = r * 100
+        printf "Line coverage: %.2f%% (threshold %s%%)\n", pct, t
+        exit (pct + 0 >= t + 0) ? 0 : 1
+      }' || { echo "##vso[task.logissue type=error]Line coverage is below ${THRESHOLD}%"; exit 1; }
     displayName: 'Check coverage threshold'
-    continueOnError: false
+
+- ${{ if or(eq(parameters.testType, 'e2e'), eq(parameters.testType, 'all')) }}:
+  - script: |
+      cd "${{ parameters.projectPath }}"
+      npm run e2e -- --headless=${{ lower(format('{0}', parameters.headless)) }}
+    displayName: 'Run e2e tests'

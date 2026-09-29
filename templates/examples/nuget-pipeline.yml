@@ -44,12 +44,12 @@ stages:
       - job: PushPackages
         displayName: 'Push packages to feed'
         pool:
-          vmImage: ubuntu-latest
-          # On Azure DevOps Server / self-hosted agents:
-          # name: Linux
+          name: Default
+          # Pin a specific agent:
           # demands:
           #   - Agent.Name -equals BUILD01
         steps:
+          - checkout: none
           - download: current
             artifact: nuget-build-artifacts
           - template: steps/nuget-push-steps.yml@templates
@@ -57,4 +57,3 @@ stages:
               packagesToPush: '$(Pipeline.Workspace)/nuget-build-artifacts/**/*.nupkg;!$(Pipeline.Workspace)/nuget-build-artifacts/**/*.symbols.nupkg'
               nuGetFeedType: 'internal'
               publishVstsFeed: 'YourProject/YourFeed'
-              allowPackageConflicts: false

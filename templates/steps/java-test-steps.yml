@@ -1,8 +1,13 @@
 # Template: java-test-steps.yml
 # Description: Java test steps for Maven and Gradle projects
+# Uses the JDK selected by setup-java.yml (JAVA_HOME).
+# Project requirements:
+# - Unit tests named *Test; integration tests named *IT (Maven: run by maven-failsafe-plugin)
+# - Gradle: an 'integrationTest' task for integration tests
+# - JaCoCo configured to produce XML reports for coverage
 # Parameters:
 # - buildTool: Build tool to use ('maven' or 'gradle')
-# - projectPath: Path to project files
+# - projectPath: Path to pom.xml (Maven) or build.gradle / build.gradle.kts (Gradle)
 # - testType: Type of tests to run ('unit', 'integration', 'all')
 # - coverageThreshold: Minimum code coverage percentage
 # - parallelTests: Whether to run tests in parallel
@@ -21,66 +26,95 @@ parameters:
 
 steps:
 - ${{ if eq(parameters.buildTool, 'maven') }}:
-  - task: Maven@4
-    displayName: 'Maven Unit Tests'
-    condition: ${{ or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}
-    inputs:
-      mavenPomFile: '$(projectPath)'
-      goals: 'test'
-      options: '-Dtest=**/*Test.java -DfailIfNoTests=false'
-      publishJUnitResults: true
-      testResultsFiles: '**/surefire-reports/*.xml'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.11'
-      mavenVersionOption: 'Default'
+  - ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
+    - task: Maven@3
+      displayName: 'Maven Unit Tests'
+      inputs:
+        mavenPomFile: '${{ parameters.projectPath }}'
+        goals: 'test'
+        options: '-Dsurefire.failIfNoSpecifiedTests=false'
+        publishJUnitResults: true
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+        javaHomeOption: 'Path'
+        jdkDirectory: '$(JAVA_HOME)'
+        mavenVersionOption: 'Default'
 
-- ${{ if eq(parameters.buildTool, 'maven') }}:
-  - task: Maven@4
-    displayName: 'Maven Integration Tests'
-    condition: ${{ or(eq(parameters.testType, 'integration'), eq(parameters.testType, 'all')) }}
-    inputs:
-      mavenPomFile: '$(projectPath)'
-      goals: 'verify'
-      options: '-Dtest=**/*IT.java -DfailIfNoTests=false'
-      publishJUnitResults: true
-      testResultsFiles: '**/failsafe-reports/*.xml'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.11'
-      mavenVersionOption: 'Default'
+  - ${{ if or(eq(parameters.testType, 'integration'), eq(parameters.testType, 'all')) }}:
+    - task: Maven@3
+      displayName: 'Maven Integration Tests'
+      inputs:
+        mavenPomFile: '${{ parameters.projectPath }}'
+        goals: 'verify'
+        options: '-Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false'
+        publishJUnitResults: true
+        testResultsFiles: '**/failsafe-reports/TEST-*.xml'
+        javaHomeOption: 'Path'
+        jdkDirectory: '$(JAVA_HOME)'
+        mavenVersionOption: 'Default'
 
-- ${{ if eq(parameters.buildTool, 'gradle') }}:
-  - task: Gradle@2
-    displayName: 'Gradle Unit Tests'
-    condition: ${{ or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish Code Coverage'
+    condition: succeededOrFailed()
     inputs:
-      workingDirectory: '$(projectPath)'
-      gradleWrapperFile: 'gradlew'
-      gradleOptions: '-Xmx3072m'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.11'
-      tasks: 'test'
-      publishJUnitResults: true
-      testResultsFiles: '**/build/test-results/test/*.xml'
-      options: ${{ if parameters.parallelTests }}'--parallel'${{ else }}''${{ endif }}
+      codeCoverageTool: 'JaCoCo'
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/target/site/jacoco/jacoco.xml'
 
 - ${{ if eq(parameters.buildTool, 'gradle') }}:
-  - task: Gradle@2
-    displayName: 'Gradle Integration Tests'
-    condition: ${{ or(eq(parameters.testType, 'integration'), eq(parameters.testType, 'all')) }}
-    inputs:
-      workingDirectory: '$(projectPath)'
-      gradleWrapperFile: 'gradlew'
-      gradleOptions: '-Xmx3072m'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.11'
-      tasks: 'integrationTest'
-      publishJUnitResults: true
-      testResultsFiles: '**/build/test-results/integrationTest/*.xml'
-      options: ${{ if parameters.parallelTests }}'--parallel'${{ else }}''${{ endif }}
+  - ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
+    - task: Gradle@2
+      displayName: 'Gradle Unit Tests'
+      inputs:
+        workingDirectory: ${{ replace(replace(parameters.projectPath, 'build.gradle.kts', ''), 'build.gradle', '') }}
+        gradleWrapperFile: ${{ format('{0}gradlew', replace(replace(parameters.projectPath, 'build.gradle.kts', ''), 'build.gradle', '')) }}
+        gradleOptions: '-Xmx3072m'
+        javaHomeOption: 'Path'
+        jdkDirectory: '$(JAVA_HOME)'
+        tasks: 'test jacocoTestReport'
+        ${{ if parameters.parallelTests }}:
+          options: '--parallel'
+        publishJUnitResults: true
+        testResultsFiles: '**/build/test-results/test/TEST-*.xml'
 
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish Code Coverage'
-  inputs:
-    codeCoverageTool: 'JaCoCo'
-    summaryFileLocation: ${{ if eq(parameters.buildTool, 'maven') }}'**/target/site/jacoco/jacoco.xml'${{ else }}'**/build/reports/jacoco/test/jacocoTestReport.xml'${{ endif }}
-    reportDirectory: ${{ if eq(parameters.buildTool, 'maven') }}'**/target/site/jacoco'${{ else }}'**/build/reports/jacoco/test/html'${{ endif }}
+  - ${{ if or(eq(parameters.testType, 'integration'), eq(parameters.testType, 'all')) }}:
+    - task: Gradle@2
+      displayName: 'Gradle Integration Tests'
+      inputs:
+        workingDirectory: ${{ replace(replace(parameters.projectPath, 'build.gradle.kts', ''), 'build.gradle', '') }}
+        gradleWrapperFile: ${{ format('{0}gradlew', replace(replace(parameters.projectPath, 'build.gradle.kts', ''), 'build.gradle', '')) }}
+        gradleOptions: '-Xmx3072m'
+        javaHomeOption: 'Path'
+        jdkDirectory: '$(JAVA_HOME)'
+        tasks: 'integrationTest'
+        ${{ if parameters.parallelTests }}:
+          options: '--parallel'
+        publishJUnitResults: true
+        testResultsFiles: '**/build/test-results/integrationTest/TEST-*.xml'
+
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish Code Coverage'
+    condition: succeededOrFailed()
+    inputs:
+      codeCoverageTool: 'JaCoCo'
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/build/reports/jacoco/test/jacocoTestReport.xml'
+
+- bash: |
+    THRESHOLD=${{ parameters.coverageThreshold }}
+    FILES=$(find . \( -name 'jacoco.xml' -o -name 'jacocoTestReport.xml' \) 2>/dev/null)
+    if [ -z "$FILES" ]; then
+      echo "##vso[task.logissue type=warning]No JaCoCo XML report found; skipping coverage threshold check."
+      exit 0
+    fi
+    COVERED=0; MISSED=0
+    for f in $FILES; do
+      line=$(grep -o '<counter type="LINE" missed="[0-9]*" covered="[0-9]*"/>' "$f" | tail -n 1)
+      m=$(echo "$line" | sed -E 's/.*missed="([0-9]+)".*/\1/')
+      c=$(echo "$line" | sed -E 's/.*covered="([0-9]+)".*/\1/')
+      MISSED=$((MISSED + ${m:-0})); COVERED=$((COVERED + ${c:-0}))
+    done
+    awk -v c="$COVERED" -v m="$MISSED" -v t="$THRESHOLD" 'BEGIN {
+      total = c + m
+      pct = (total > 0) ? c * 100 / total : 0
+      printf "Line coverage: %.2f%% (threshold %s%%)\n", pct, t
+      exit (pct >= t + 0) ? 0 : 1
+    }' || { echo "##vso[task.logissue type=error]Line coverage is below ${THRESHOLD}%"; exit 1; }
+  displayName: 'Check coverage threshold'

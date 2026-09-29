@@ -17,20 +17,27 @@ parameters:
 
 steps:
 - script: |
-    cd $(projectPath)
+    cd "${{ parameters.projectPath }}"
     npm ci
   displayName: 'Install dependencies'
 
 - script: |
-    cd $(projectPath)
-    npm run $(lintScript)
+    cd "${{ parameters.projectPath }}"
+    npm run ${{ parameters.lintScript }}
   displayName: 'Run lint'
   continueOnError: ${{ parameters.continueOnError }}
 
+- script: |
+    if [ -d "${{ parameters.projectPath }}/reports" ]; then
+      echo "##vso[task.setvariable variable=hasLintReports]true"
+    fi
+  displayName: 'Check for lint reports'
+  condition: succeededOrFailed()
+
 - task: PublishBuildArtifacts@1
-  displayName: 'Publish lint reports (if any)'
-  condition: exists('$(projectPath)/reports')
+  displayName: 'Publish lint reports'
+  condition: and(succeededOrFailed(), eq(variables['hasLintReports'], 'true'))
   inputs:
-    PathtoPublish: '$(projectPath)/reports'
+    PathtoPublish: '${{ parameters.projectPath }}/reports'
     ArtifactName: 'lint-reports'
     publishLocation: 'Container'

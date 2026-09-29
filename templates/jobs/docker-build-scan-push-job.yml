@@ -8,7 +8,9 @@
 # - containerServiceConnection: Service connection for Docker registry login
 # - sharedContainerServiceConnection: (Optional) Service connection for shared Docker registry login
 # - imageRepository: Docker image repository name
-# - containerRegistry: Docker registry URL prefix (e.g., 'docker.example.com:5000/')
+# - containerRegistry: Registry host prefix with trailing slash (e.g., 'docker.example.com:5000/').
+#   Must match the host of containerServiceConnection, which is what Docker@2 uses to tag the image
+# - buildArguments: Extra arguments for docker build (default: '')
 # - dockerfilePath: Path to Dockerfile
 # - buildContext: Build context path (default: '$(Build.SourcesDirectory)')
 # - tag: Image tag
@@ -65,7 +67,7 @@ parameters:
 - name: pushCache
   type: boolean
   default: false
- - name: buildArguments
+- name: buildArguments
   type: string
   default: ''
 
@@ -79,7 +81,7 @@ jobs:
   steps:
   - checkout: self
 
-  - template: ../steps/docker-login.yml@templates
+  - template: steps/docker-login.yml@templates
     parameters:
       containerServiceConnection: ${{ parameters.containerServiceConnection }}
       sharedContainerServiceConnection: ${{ parameters.sharedContainerServiceConnection }}
@@ -89,32 +91,43 @@ jobs:
         docker pull ${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.cacheFromTag }} || echo "No existing cache image"
       displayName: 'Pull cache image (if exists)'
 
-  - ${{ if eq(parameters.enableCache, true) }}:
-    - template: ../steps/docker-build.yml@templates
+    - template: steps/docker-build.yml@templates
       parameters:
+        containerServiceConnection: ${{ parameters.containerServiceConnection }}
         imageRepository: ${{ parameters.imageRepository }}
         dockerfilePath: ${{ parameters.dockerfilePath }}
         buildContext: ${{ parameters.buildContext }}
         tag: ${{ parameters.tag }}
-        additionalArguments: '${{ parameters.buildArguments }} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from type=registry,ref=${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.cacheFromTag }}'
+        additionalArguments: '${{ parameters.buildArguments }} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.cacheFromTag }}'
 
   - ${{ if ne(parameters.enableCache, true) }}:
-    - template: ../steps/docker-build.yml@templates
+    - template: steps/docker-build.yml@templates
       parameters:
+        containerServiceConnection: ${{ parameters.containerServiceConnection }}
         imageRepository: ${{ parameters.imageRepository }}
         dockerfilePath: ${{ parameters.dockerfilePath }}
         buildContext: ${{ parameters.buildContext }}
         tag: ${{ parameters.tag }}
         additionalArguments: '${{ parameters.buildArguments }}'
 
-  - template: ../steps/qualys-scan.yml@templates
+  - script: |
+      IMAGE="${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.tag }}"
+      if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+        echo "##vso[task.logissue type=error]Image $IMAGE not found. containerRegistry must match the host of service connection '${{ parameters.containerServiceConnection }}'."
+        docker images | head -n 20
+        exit 1
+      fi
+    displayName: 'Verify built image name'
+
+  - template: steps/qualys-scan.yml@templates
     parameters:
       qualysPath: ${{ parameters.qualysPath }}
       imageReference: '${{ parameters.containerRegistry }}${{ parameters.imageRepository }}:${{ parameters.tag }}'
       outputPath: ${{ parameters.qualysOutputPath }}
 
-  - template: ../steps/docker-push.yml@templates
+  - template: steps/docker-push.yml@templates
     parameters:
+      containerServiceConnection: ${{ parameters.containerServiceConnection }}
       imageRepository: ${{ parameters.imageRepository }}
       tag: ${{ parameters.tag }}
 

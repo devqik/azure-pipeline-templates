@@ -2,10 +2,9 @@
 # Description: Push packed .nupkg files to a NuGet feed
 # Parameters:
 # - packagesToPush: Path glob for packages to push
-# - nuGetFeedType: Feed type ('internal' for Azure Artifacts, 'external' for nuget.org)
-# - publishVstsFeed: Azure Artifacts feed name (required when nuGetFeedType is 'internal')
-# - publishFeedCredentials: Service connection for an external feed
-# - allowPackageConflicts: Whether to allow overwriting existing versions (default: false)
+# - nuGetFeedType: Feed type ('internal' for an Azure Artifacts feed, 'external' for nuget.org or another server)
+# - publishVstsFeed: Azure Artifacts feed, 'Feed' or 'Project/Feed' (required when nuGetFeedType is 'internal')
+# - publishFeedCredentials: NuGet service connection (required when nuGetFeedType is 'external')
 
 parameters:
 - name: packagesToPush
@@ -21,22 +20,15 @@ parameters:
 - name: publishFeedCredentials
   type: string
   default: ''
-- name: allowPackageConflicts
-  type: boolean
-  default: false
 
 steps:
-- task: NuGetAuthenticate@1
-  displayName: 'Authenticate to NuGet feed'
-
 - task: DotNetCoreCLI@2
   displayName: 'Push NuGet packages'
   inputs:
     command: 'push'
-    packagesToPush: ${{ parameters.packagesToPush }}
-    nuGetFeedType: ${{ parameters.nuGetFeedType }}
+    packagesToPush: '${{ parameters.packagesToPush }}'
+    nuGetFeedType: '${{ parameters.nuGetFeedType }}'
     ${{ if eq(parameters.nuGetFeedType, 'internal') }}:
-      publishVstsFeed: ${{ parameters.publishVstsFeed }}
+      publishVstsFeed: '${{ parameters.publishVstsFeed }}'
     ${{ if eq(parameters.nuGetFeedType, 'external') }}:
-      publishFeedCredentials: ${{ parameters.publishFeedCredentials }}
-    allowPackageConflicts: ${{ parameters.allowPackageConflicts }}
+      publishFeedCredentials: '${{ parameters.publishFeedCredentials }}'

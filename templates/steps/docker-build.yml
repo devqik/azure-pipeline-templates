@@ -1,6 +1,7 @@
 # Template: docker-build.yml
 # Description: Builds a Docker image
 # Parameters:
+# - containerServiceConnection: Docker registry service connection; the image is tagged <registry host>/<imageRepository>:<tag>
 # - imageRepository: Docker repository name
 # - dockerfilePath: Path to Dockerfile
 # - buildContext: Build context path
@@ -8,6 +9,8 @@
 # - additionalArguments: Additional arguments to pass to docker build (optional)
 
 parameters:
+- name: containerServiceConnection
+  type: string
 - name: imageRepository
   type: string
 - name: dockerfilePath
@@ -26,10 +29,11 @@ steps:
   env:
     DOCKER_BUILDKIT: 1
   inputs:
-    repository: ${{ parameters.imageRepository }}
+    containerRegistry: '${{ parameters.containerServiceConnection }}'
+    repository: '${{ parameters.imageRepository }}'
     command: build
-    Dockerfile: ${{ parameters.dockerfilePath }}
-    buildContext: ${{ parameters.buildContext }}
-    arguments: ${{ parameters.additionalArguments }}
+    Dockerfile: '${{ parameters.dockerfilePath }}'
+    buildContext: '${{ parameters.buildContext }}'
+    arguments: '${{ parameters.additionalArguments }}'
     tags: |
       ${{ parameters.tag }}

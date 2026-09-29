@@ -49,7 +49,7 @@ parameters:
 - name: pushCache
   type: boolean
   default: false
- - name: buildArguments
+- name: buildArguments
   type: string
   default: ''
 
@@ -57,7 +57,7 @@ stages:
 - stage: ${{ parameters.stageName }}
   displayName: ${{ parameters.displayName }}
   jobs:
-  - template: ../jobs/docker-build-scan-push-job.yml@templates
+  - template: jobs/docker-build-scan-push-job.yml@templates
     parameters:
       containerServiceConnection: ${{ parameters.containerServiceConnection }}
       sharedContainerServiceConnection: ${{ parameters.sharedContainerServiceConnection }}

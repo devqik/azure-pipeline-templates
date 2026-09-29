@@ -1,11 +1,15 @@
 # Template: nuget-test-steps.yml
 # Description: .NET test steps for running unit and integration tests with coverage
+# Project requirements:
+# - Test projects reference coverlet.collector (for "XPlat Code Coverage")
+# - Integration tests are tagged Category=Integration
+#   (xUnit: [Trait("Category", "Integration")], NUnit: [Category("Integration")], MSTest: [TestCategory("Integration")])
 # Parameters:
 # - projectPath: Path to .NET project or solution
 # - projects: Glob for test project or solution files
 # - testType: Type of tests to run ('unit', 'integration', 'all')
-# - coverageThreshold: Minimum code coverage percentage
-# - parallelTests: Whether to run tests in parallel
+# - coverageThreshold: Minimum line coverage percentage
+# - parallelTests: Whether to build and run test projects in parallel
 # - buildConfiguration: Build configuration ('Debug' or 'Release')
 
 parameters:
@@ -29,63 +33,58 @@ steps:
   displayName: 'Restore dependencies'
   inputs:
     command: 'restore'
-    projects: '$(projects)'
-    workingDirectory: '$(projectPath)'
+    projects: '${{ parameters.projects }}'
+    workingDirectory: '${{ parameters.projectPath }}'
 
-- ${{ if eq(parameters.testType, 'unit') }}:
-  - task: DotNetCoreCLI@2
+- task: DotNetCoreCLI@2
+  ${{ if eq(parameters.testType, 'unit') }}:
     displayName: 'Run unit tests with coverage'
-    inputs:
-      command: 'test'
-      projects: '$(projects)'
-      workingDirectory: '$(projectPath)'
-      ${{ if eq(parameters.parallelTests, true) }}:
-        arguments: '--configuration $(buildConfiguration) --no-restore --filter "Category!=Integration" --logger trx --results-directory $(Agent.TempDirectory)/TestResults --collect:"XPlat Code Coverage" --maxcpucount:0 -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura'
-      ${{ if ne(parameters.parallelTests, true) }}:
-        arguments: '--configuration $(buildConfiguration) --no-restore --filter "Category!=Integration" --logger trx --results-directory $(Agent.TempDirectory)/TestResults --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura'
-
-- ${{ if eq(parameters.testType, 'integration') }}:
-  - task: DotNetCoreCLI@2
+  ${{ if eq(parameters.testType, 'integration') }}:
     displayName: 'Run integration tests'
-    inputs:
-      command: 'test'
-      projects: '$(projects)'
-      workingDirectory: '$(projectPath)'
-      ${{ if eq(parameters.parallelTests, true) }}:
-        arguments: '--configuration $(buildConfiguration) --no-restore --filter "Category=Integration" --logger trx --results-directory $(Agent.TempDirectory)/TestResults --maxcpucount:0'
-      ${{ if ne(parameters.parallelTests, true) }}:
-        arguments: '--configuration $(buildConfiguration) --no-restore --filter "Category=Integration" --logger trx --results-directory $(Agent.TempDirectory)/TestResults'
-
-- ${{ if eq(parameters.testType, 'all') }}:
-  - task: DotNetCoreCLI@2
+  ${{ if eq(parameters.testType, 'all') }}:
     displayName: 'Run all tests with coverage'
-    inputs:
-      command: 'test'
-      projects: '$(projects)'
-      workingDirectory: '$(projectPath)'
-      ${{ if eq(parameters.parallelTests, true) }}:
-        arguments: '--configuration $(buildConfiguration) --no-restore --logger trx --results-directory $(Agent.TempDirectory)/TestResults --collect:"XPlat Code Coverage" --maxcpucount:0 -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura'
-      ${{ if ne(parameters.parallelTests, true) }}:
-        arguments: '--configuration $(buildConfiguration) --no-restore --logger trx --results-directory $(Agent.TempDirectory)/TestResults --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura'
+  inputs:
+    command: 'test'
+    projects: '${{ parameters.projects }}'
+    workingDirectory: '${{ parameters.projectPath }}'
+    publishTestResults: false
+    ${{ if and(eq(parameters.testType, 'unit'), eq(parameters.parallelTests, true)) }}:
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --no-restore --filter "Category!=Integration" --logger trx --results-directory "$(Agent.TempDirectory)/TestResults" --collect:"XPlat Code Coverage" -maxcpucount'
+    ${{ if and(eq(parameters.testType, 'unit'), ne(parameters.parallelTests, true)) }}:
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --no-restore --filter "Category!=Integration" --logger trx --results-directory "$(Agent.TempDirectory)/TestResults" --collect:"XPlat Code Coverage" -maxcpucount:1'
+    ${{ if and(eq(parameters.testType, 'integration'), eq(parameters.parallelTests, true)) }}:
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --no-restore --filter "Category=Integration" --logger trx --results-directory "$(Agent.TempDirectory)/TestResults" -maxcpucount'
+    ${{ if and(eq(parameters.testType, 'integration'), ne(parameters.parallelTests, true)) }}:
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --no-restore --filter "Category=Integration" --logger trx --results-directory "$(Agent.TempDirectory)/TestResults" -maxcpucount:1'
+    ${{ if and(eq(parameters.testType, 'all'), eq(parameters.parallelTests, true)) }}:
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --no-restore --logger trx --results-directory "$(Agent.TempDirectory)/TestResults" --collect:"XPlat Code Coverage" -maxcpucount'
+    ${{ if and(eq(parameters.testType, 'all'), ne(parameters.parallelTests, true)) }}:
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --no-restore --logger trx --results-directory "$(Agent.TempDirectory)/TestResults" --collect:"XPlat Code Coverage" -maxcpucount:1'
 
 - ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'
+    condition: succeededOrFailed()
     inputs:
       codeCoverageTool: 'Cobertura'
       summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
-      reportDirectory: '$(Agent.TempDirectory)/TestResults'
 
-- ${{ if or(eq(parameters.testType, 'unit'), eq(parameters.testType, 'all')) }}:
-  - script: |
-      echo "Checking code coverage threshold ($(coverageThreshold)%)..."
-      COVERAGE_FILE=$(find "$(Agent.TempDirectory)/TestResults" -name "coverage.cobertura.xml" | head -n 1)
-      if [ -z "$COVERAGE_FILE" ]; then
-        echo "No coverage file found; skipping threshold check."
-        exit 0
+  - bash: |
+      THRESHOLD=${{ parameters.coverageThreshold }}
+      FILES=$(find "$(Agent.TempDirectory)/TestResults" -name 'coverage.cobertura.xml' 2>/dev/null)
+      if [ -z "$FILES" ]; then
+        echo "##vso[task.logissue type=error]No coverage.cobertura.xml found. Add the coverlet.collector package to your test projects."
+        exit 1
       fi
-      LINE_RATE=$(python3 -c "import xml.etree.ElementTree as ET; print(float(ET.parse('$COVERAGE_FILE').getroot().attrib.get('line-rate', 0)) * 100)")
-      echo "Line coverage: ${LINE_RATE}%"
-      python3 -c "import sys; sys.exit(0 if float('${LINE_RATE}') >= float('$(coverageThreshold)') else 1)"
+      COVERED=0; VALID=0
+      for f in $FILES; do
+        c=$(grep -o 'lines-covered="[0-9]*"' "$f" | head -n 1 | grep -o '[0-9]*')
+        v=$(grep -o 'lines-valid="[0-9]*"' "$f" | head -n 1 | grep -o '[0-9]*')
+        COVERED=$((COVERED + ${c:-0})); VALID=$((VALID + ${v:-0}))
+      done
+      awk -v c="$COVERED" -v v="$VALID" -v t="$THRESHOLD" 'BEGIN {
+        pct = (v > 0) ? c * 100 / v : 0
+        printf "Line coverage across all test projects: %.2f%% (threshold %s%%)\n", pct, t
+        exit (pct >= t + 0) ? 0 : 1
+      }' || { echo "##vso[task.logissue type=error]Line coverage is below ${THRESHOLD}%"; exit 1; }
     displayName: 'Check coverage threshold'
-    continueOnError: false

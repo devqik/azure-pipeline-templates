@@ -11,6 +11,7 @@
 # - artifactName: Name for published artifacts (default: 'nuget-artifacts')
 # - cacheDependencies: Whether to cache NuGet packages (default: true)
 # - packPackages: Whether to pack NuGet packages (default: true)
+# - packagesToPack: Projects to pack; ';'-separated globs, '!' excludes (default: '**/*.csproj;!**/*Test*.csproj')
 # - packageVersion: Version to apply when packing (default: empty, uses project version)
 # - includeSymbols: Whether to include symbol packages (default: false)
 
@@ -46,6 +47,9 @@ parameters:
 - name: packPackages
   type: boolean
   default: true
+- name: packagesToPack
+  type: string
+  default: '**/*.csproj;!**/*Test*.csproj'
 - name: packageVersion
   type: string
   default: ''
@@ -65,34 +69,24 @@ jobs:
     pool:
       vmImage: ${{ parameters.vmImage }}
 
-  variables:
-    buildConfiguration: ${{ parameters.buildConfiguration }}
-    projectPath: ${{ parameters.projectPath }}
-    projects: ${{ parameters.projects }}
-    artifactName: ${{ parameters.artifactName }}
-    dotnetVersion: ${{ parameters.dotnetVersion }}
-    cacheDependencies: ${{ parameters.cacheDependencies }}
-    packPackages: ${{ parameters.packPackages }}
-    packageVersion: ${{ parameters.packageVersion }}
-    includeSymbols: ${{ parameters.includeSymbols }}
-
   steps:
   - template: steps/setup-dotnet.yml@templates
     parameters:
-      dotnetVersion: $(dotnetVersion)
+      dotnetVersion: ${{ parameters.dotnetVersion }}
 
   - template: steps/nuget-build-steps.yml@templates
     parameters:
-      buildConfiguration: $(buildConfiguration)
-      projectPath: $(projectPath)
-      projects: $(projects)
+      buildConfiguration: ${{ parameters.buildConfiguration }}
+      projectPath: ${{ parameters.projectPath }}
+      projects: ${{ parameters.projects }}
       cacheDependencies: ${{ parameters.cacheDependencies }}
       packPackages: ${{ parameters.packPackages }}
+      packagesToPack: ${{ parameters.packagesToPack }}
       packageVersion: ${{ parameters.packageVersion }}
       includeSymbols: ${{ parameters.includeSymbols }}
 
   - ${{ if parameters.packPackages }}:
     - template: steps/publish-artifacts.yml@templates
       parameters:
-        artifactName: $(artifactName)
+        artifactName: ${{ parameters.artifactName }}
         publishPath: '$(Build.ArtifactStagingDirectory)'

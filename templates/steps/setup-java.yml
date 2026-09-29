@@ -1,7 +1,7 @@
 # Template: setup-java.yml
 # Description: Setup Java environment with specified version
 # Parameters:
-# - javaVersion: Java version to install (default: '11')
+# - javaVersion: Java version to install (default: '11'). Must be pre-installed on the agent
 
 parameters:
 - name: javaVersion
@@ -10,15 +10,15 @@ parameters:
 
 steps:
 - task: JavaToolInstaller@0
-  displayName: 'Setup Java $(javaVersion)'
+  displayName: 'Setup Java ${{ parameters.javaVersion }}'
   inputs:
-    versionSpec: $(javaVersion)
+    versionSpec: '${{ parameters.javaVersion }}'
     jdkArchitectureOption: 'x64'
     jdkSourceOption: 'PreInstalled'
 
 - script: |
     echo "Java version:"
     java -version
-    echo "Maven version:"
-    mvn -version
-  displayName: 'Verify Java and Maven installation'
+    echo "JAVA_HOME: $JAVA_HOME"
+    if command -v mvn >/dev/null 2>&1; then mvn -version; fi
+  displayName: 'Verify Java installation'

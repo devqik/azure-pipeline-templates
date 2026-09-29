@@ -65,7 +65,7 @@ jobs:
       deploy:
         steps:
         - checkout: self
-        - template: ../steps/update-image-tag.yml@templates
+        - template: steps/update-image-tag.yml@templates
           parameters:
             devopsSshBase: ${{ parameters.devopsSshBase }}
             organizationName: ${{ parameters.organizationName }}

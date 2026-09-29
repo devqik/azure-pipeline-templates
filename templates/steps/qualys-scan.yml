@@ -31,11 +31,13 @@ parameters:
 
 steps:
 - script: |
-    cd ${{ parameters.qualysPath }}
+    cd "${{ parameters.qualysPath }}"
     SKIP_FLAG=""
-    if [ "${{ parameters.skipJavaDbUpdate }}" = "true" ]; then
-      SKIP_FLAG="--skip-java-db-update=true"
-    fi
-    ./qscanner image ${{ parameters.imageReference }} --pod ${{ parameters.pod }} --access-token ${{ parameters.accessToken }} \
-    -o ${{ parameters.outputPath }} $SKIP_FLAG --tags ${{ parameters.tags }}
+    case "${{ parameters.skipJavaDbUpdate }}" in
+      True|true) SKIP_FLAG="--skip-java-db-update=true" ;;
+    esac
+    ./qscanner image "${{ parameters.imageReference }}" --pod "${{ parameters.pod }}" --access-token "$QUALYS_ACCESS_TOKEN" \
+      -o "${{ parameters.outputPath }}" $SKIP_FLAG --tags "${{ parameters.tags }}"
   displayName: 'Scan Image Using Qualys'
+  env:
+    QUALYS_ACCESS_TOKEN: ${{ parameters.accessToken }}

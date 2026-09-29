@@ -1,7 +1,8 @@
 # Template: setup-nodejs.yml
 # Description: Setup Node.js environment with specified version
 # Parameters:
-# - nodeVersion: Node.js version to install (default: '18')
+# - nodeVersion: Node.js version to install (default: '18'). Set to '' to use the Node.js already on the agent
+#   (NodeTool downloads from nodejs.org, which fails on offline agents)
 
 parameters:
 - name: nodeVersion
@@ -9,10 +10,11 @@ parameters:
   default: '18'
 
 steps:
-- task: NodeTool@0
-  displayName: 'Setup Node.js $(nodeVersion)'
-  inputs:
-    versionSpec: $(nodeVersion)
+- ${{ if ne(parameters.nodeVersion, '') }}:
+  - task: NodeTool@0
+    displayName: 'Setup Node.js ${{ parameters.nodeVersion }}'
+    inputs:
+      versionSpec: '${{ parameters.nodeVersion }}'
 
 - script: |
     echo "Node.js version:"

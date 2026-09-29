@@ -49,21 +49,14 @@ jobs:
     pool:
       vmImage: ${{ parameters.vmImage }}
 
-  variables:
-    projectPath: ${{ parameters.projectPath }}
-    projects: ${{ parameters.projects }}
-    dotnetVersion: ${{ parameters.dotnetVersion }}
-    severity: ${{ parameters.severity }}
-    continueOnError: ${{ parameters.continueOnError }}
-
   steps:
   - template: steps/setup-dotnet.yml@templates
     parameters:
-      dotnetVersion: $(dotnetVersion)
+      dotnetVersion: ${{ parameters.dotnetVersion }}
 
   - template: steps/nuget-lint-steps.yml@templates
     parameters:
-      projectPath: $(projectPath)
-      projects: $(projects)
-      severity: $(severity)
+      projectPath: ${{ parameters.projectPath }}
+      projects: ${{ parameters.projects }}
+      severity: ${{ parameters.severity }}
       continueOnError: ${{ parameters.continueOnError }}
